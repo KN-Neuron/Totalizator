@@ -1,27 +1,17 @@
 import Phaser from 'phaser';
-
-export class Play extends Phaser.Scene
-{
-    constructor ()
-    {
+export class Play extends Phaser.Scene {
+    constructor() {
         super({
             key: 'Play'
         });
     }
-
-    init ()
-    {
+    init() {
         // Fadein camera
         this.cameras.main.fadeIn(500);
-        // this.lives = 10;
-        // this.volumeButton();
     }
-
-    create ()
-    {
+    create() {
         // Background image
         this.add.image(0, 0, "background").setOrigin(0);
-
         const titleText = this.add.text(this.sys.game.scale.width / 2, this.sys.game.scale.height / 2,
             "Gra totalizatora sportowego\nNacisnij aby zaczac",
             { align: "center", strokeThickness: 4, fontSize: 40, fontStyle: "bold", color: "#8c7ae6" }
@@ -29,7 +19,6 @@ export class Play extends Phaser.Scene
             .setOrigin(.5)
             .setDepth(3)
             .setInteractive();
-
         // title tween like retro arcade
         this.add.tween({
             targets: titleText,
@@ -39,7 +28,6 @@ export class Play extends Phaser.Scene
             repeat: -1,
             yoyo: true,
         });
-
         // Text Events
         titleText.on(Phaser.Input.Events.POINTER_OVER, () => {
             titleText.setColor("#9c88ff");
@@ -63,53 +51,33 @@ export class Play extends Phaser.Scene
                 }
             })
         });
-
     }
-
-    restartGame ()
-    {
+    restartGame() {
         this.cameras.main.fadeOut(200 * this.cards.length);
     }
-
-    startGame ()
-    {
+    startGame() {
         const frames = this.textures.get('cards').getFrameNames();
-
         const cards = [];
-
-        // Random card
-        // cards.push(this.add.sprite(0, 0, 'cards', Phaser.Math.RND.pick(frames)).setScale(0.5));
-
         cards.push(this.add.sprite(0, 0, 'cards', 'diamondsAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
+        for (var a = 0; a < 5; a++) {
             cards.push(this.add.sprite(0, 0))
         }
-
-        cards.push(this.add.sprite(0, 0, 'cards', 'heartsAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
-            cards.push(this.add.sprite(0, 0))
-        }
-
         cards.push(this.add.sprite(0, 0, 'cards', 'clubsAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
+        for (var a = 0; a < 5; a++) {
             cards.push(this.add.sprite(0, 0))
         }
-
+        cards.push(this.add.sprite(0, 0, 'cards', 'heartsAce').setScale(0.7));
+        for (var a = 0; a < 5; a++) {
+            cards.push(this.add.sprite(0, 0))
+        }
         cards.push(this.add.sprite(0, 0, 'cards', 'spadesAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
+        for (var a = 0; a < 5; a++) {
             cards.push(this.add.sprite(0, 0))
         }
-
         cards.push(this.add.sprite(0, 0))
-        for (var a = 0; a < 5; a++)
-        {
+        for (var a = 0; a < 5; a++) {
             cards.push(this.add.sprite(0, 0, 'cards', 'back').setScale(0.7));
         }
-
         Phaser.Actions.GridAlign(cards, {
             width: 6,
             height: 5,
@@ -118,6 +86,47 @@ export class Play extends Phaser.Scene
             x: 100,
             y: 100
         });
+        // Balatro-style breathing animation with slight rotation
+        cards.forEach((card, index) => {
+            if (card.texture && card.texture.key === 'cards') {
+                const delay = index * 50;
+                // Add some randomness to make it more organic
+                const rotationVariation = Phaser.Math.Between(3500, 4500);
 
+                // Scale breathing
+                this.tweens.add({
+                    targets: card,
+                    scaleX: 0.70,
+                    scaleY: 0.70,
+                    duration: 1400,
+                    delay: delay,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+
+                // Subtle float
+                this.tweens.add({
+                    targets: card,
+                    y: card.y - 8,
+                    duration: 2000,
+                    delay: delay,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+
+                // Smooth rotation wobble - much longer duration for fluid motion
+                this.tweens.add({
+                    targets: card,
+                    angle: 2,
+                    duration: rotationVariation,
+                    delay: delay + 100,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut'
+                });
+            }
+        });
     }
 }

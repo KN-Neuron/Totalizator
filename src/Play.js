@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
+import { cardGridManager } from './cards/cardGridManager.js';
 
 export class Play extends Phaser.Scene
 {
+    cardGrid = null;
+
     constructor ()
     {
         super({
@@ -71,53 +74,47 @@ export class Play extends Phaser.Scene
         this.cameras.main.fadeOut(200 * this.cards.length);
     }
 
+    createInitialCards() {
+        const suits = ['diamondsAce', 'heartsAce', 'clubsAce', 'spadesAce'];
+
+        for(let row = 0; row < 4; row++) {
+            const cardData = {
+                type: suits[row],
+                onClick: (card) => {
+                    this.cardGrid.moveCardForward(row);
+                }
+            }
+
+            this.cardGrid.createCard(row, 0, cardData);
+        }
+
+        for(let col = 1; col < 7; col++) {
+            const cardData = {
+                type: 'back',
+                onClick: (card) => {
+                    this.cardGrid.moveCardForward(row);
+                }
+            }
+
+            this.cardGrid.createCard(4, col, cardData);
+        }
+    }
+
     startGame ()
     {
-        const frames = this.textures.get('cards').getFrameNames();
-
-        const cards = [];
-
-        // Random card
-        // cards.push(this.add.sprite(0, 0, 'cards', Phaser.Math.RND.pick(frames)).setScale(0.5));
-
-        cards.push(this.add.sprite(0, 0, 'cards', 'diamondsAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
-            cards.push(this.add.sprite(0, 0))
-        }
-
-        cards.push(this.add.sprite(0, 0, 'cards', 'heartsAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
-            cards.push(this.add.sprite(0, 0))
-        }
-
-        cards.push(this.add.sprite(0, 0, 'cards', 'clubsAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
-            cards.push(this.add.sprite(0, 0))
-        }
-
-        cards.push(this.add.sprite(0, 0, 'cards', 'spadesAce').setScale(0.7));
-        for (var a = 0; a < 5; a++)
-        {
-            cards.push(this.add.sprite(0, 0))
-        }
-
-        cards.push(this.add.sprite(0, 0))
-        for (var a = 0; a < 5; a++)
-        {
-            cards.push(this.add.sprite(0, 0, 'cards', 'back').setScale(0.7));
-        }
-
-        Phaser.Actions.GridAlign(cards, {
-            width: 6,
-            height: 5,
-            cellWidth: 180,
-            cellHeight: 145,
-            x: 100,
-            y: 100
+        this.cardGrid = new cardGridManager(this, {
+            rows: 5,
+            columns: 7,
+            cardWidth: 150,
+            cardHeight: 100,
+            marginX: 20,
+            marginY: 30,
+            visibleColumns: 7
         });
 
+        this.cards = this.cardGrid.createGrid();
+        this.createInitialCards();
+
+        this.cardGrid.moveCard(1)
     }
 }

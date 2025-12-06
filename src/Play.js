@@ -40,16 +40,16 @@ export class Play extends Phaser.Scene {
             .setInteractive();
 
         // title tween like retro arcade
-        this.add.tween({
-
-            targets: titleText,
-            duration: 800,
-            ease: (value) => (value > .8),
-            alpha: 0,
-
-            repeat: -1,
-            yoyo: true,
-        });
+        // this.add.tween({
+        //
+        //     targets: titleText,
+        //     duration: 800,
+        //     ease: (value) => (value > .8),
+        //     alpha: 0,
+        //
+        //     repeat: -1,
+        //     yoyo: true,
+        // });
 
         // Text Events
         titleText.on(Phaser.Input.Events.POINTER_OVER, () => {
@@ -166,7 +166,7 @@ export class Play extends Phaser.Scene {
                         return;
                     }
                 }
-                
+
                 let suits = ["diamonds", "clubs", "hearts", "spades"];
                 // sprawdzanie czy jest jakis row zwolniony
                 let counter = 0;
@@ -184,16 +184,16 @@ export class Play extends Phaser.Scene {
                     }
                     //this.cardGrid.createCard(4, last_column+1, cardData);
                     this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value)
-                    
+
                     last_column++;
                     this.cardGrid.moveCard(suits.indexOf(sideCard.color), false);
                     return;
                 }
-                
-                
+
+
                 // losowanie karty z decku
                 let pulled_card = this.cardPack.getNext();
-                
+
                 if (pulled_card.color != "JOKER") {
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', pulled_card.color + pulled_card.value).setScale(0.75);
                     this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
@@ -201,7 +201,7 @@ export class Play extends Phaser.Scene {
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "joker").setScale(0.75);
                     // TODO: mechanika jokerow
                 }
-                
+
                 // sprawdzanie konca gry drugi raz bo nie bedzie timer delaya
                 for(let i = 0; i < 4; i++) {
                     if (this.cardGrid.getCardAt(i, 6) != null) {

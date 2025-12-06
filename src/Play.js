@@ -77,26 +77,44 @@ export class Play extends Phaser.Scene
 
         const cards = [];
 
-        for (var i = 0; i < 4; i++)
+        // Random card
+        // cards.push(this.add.sprite(0, 0, 'cards', Phaser.Math.RND.pick(frames)).setScale(0.5));
+
+        cards.push(this.add.sprite(0, 0, 'cards', 'diamondsAce').setScale(0.7));
+        for (var a = 0; a < 5; a++)
         {
-            cards.push(this.add.sprite(0, 0, 'cards', Phaser.Math.RND.pick(frames)).setScale(0.5));
-            for (var a = 0; a < 5; a++)
-            {
-                cards.push(this.add.sprite(0, 0))
-            }
+            cards.push(this.add.sprite(0, 0))
+        }
+
+        cards.push(this.add.sprite(0, 0, 'cards', 'heartsAce').setScale(0.7));
+        for (var a = 0; a < 5; a++)
+        {
+            cards.push(this.add.sprite(0, 0))
+        }
+
+        cards.push(this.add.sprite(0, 0, 'cards', 'clubsAce').setScale(0.7));
+        for (var a = 0; a < 5; a++)
+        {
+            cards.push(this.add.sprite(0, 0))
+        }
+
+        cards.push(this.add.sprite(0, 0, 'cards', 'spadesAce').setScale(0.7));
+        for (var a = 0; a < 5; a++)
+        {
+            cards.push(this.add.sprite(0, 0))
         }
 
         cards.push(this.add.sprite(0, 0))
         for (var a = 0; a < 5; a++)
         {
-            cards.push(this.add.sprite(0, 0, 'cards', [2, 2]).setScale(0.5));
+            cards.push(this.add.sprite(0, 0, 'cards', 'back').setScale(0.7));
         }
 
         Phaser.Actions.GridAlign(cards, {
             width: 6,
             height: 5,
-            cellWidth: 120,
-            cellHeight: 105,
+            cellWidth: 180,
+            cellHeight: 145,
             x: 100,
             y: 100
         });

@@ -155,7 +155,7 @@ export class Play extends Phaser.Scene {
     startGameTimer() {
         let last_column = 0;
         let timer = this.time.addEvent({
-            delay: 1000,
+            delay: 2000,
             callback: function ()
             {
                 // sprawdzanie konca gry bo musi byc na poczatku

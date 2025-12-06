@@ -18,7 +18,7 @@ export class cardGridManager {
     }
 
     resetGrid() {
-        this.cardGrid = Array(this.config.rows).fill().map(() => 
+        this.cardGrid = Array(this.config.rows).fill().map(() =>
             Array(this.config.columns).fill(null)
         );
 
@@ -30,29 +30,29 @@ export class cardGridManager {
     createGrid() {
         const { width, height } = this.scene.cameras.main;
         const { columns, rows, cardWidth, cardHeight, marginX, marginY, maxScreenPercentage, autoScale, visibleColumns } = this.config;
-        
+
         const neededWidth = columns * cardWidth + (columns - 1) * marginX;
         const neededHeight = rows * cardHeight + (rows - 1) * marginY;
-        
+
         const maxAllowedWidth = width * maxScreenPercentage;
         const maxAllowedHeight = height * maxScreenPercentage;
-        
+
         this.scaleFactor = 1.0;
-        
+
         if (autoScale) {
             const widthScale = maxAllowedWidth / neededWidth;
             const heightScale = maxAllowedHeight / neededHeight;
             this.scaleFactor = Math.min(widthScale, heightScale, 1.0);
         }
-        
+
         const scaledCardWidth = cardWidth * this.scaleFactor;
         const scaledCardHeight = cardHeight * this.scaleFactor;
         const scaledMarginX = marginX * this.scaleFactor;
         const scaledMarginY = marginY * this.scaleFactor;
-        
+
         const totalWidth = visibleColumns * scaledCardWidth + (visibleColumns - 1) * scaledMarginX;
         const totalHeight = rows * scaledCardHeight + (rows - 1) * scaledMarginY;
-        
+
         const startX = (width - totalWidth) / 2 + scaledCardWidth / 2;
         const startY = (height - totalHeight) / 2 + scaledCardHeight / 2;
 
@@ -111,7 +111,7 @@ export class cardGridManager {
         const currentColumn = this.cardColumnPositions[row];
 
         let newColumn;
-        
+
         if (forward) {
             if (currentColumn >= 6) {
                 return false;
@@ -136,7 +136,7 @@ export class cardGridManager {
             targets: card,
             x: x,
             y: y,
-            duration: 300,
+            duration: 500,
             ease: "Power2",
             onComplete: () => {
                 this.cardGrid[row][currentColumn] = null;

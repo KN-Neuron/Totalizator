@@ -4,10 +4,10 @@ export default class CardPack {
     constructor(cardsValues, cardsColors, numJokers, initialCardsNumber = 5) {
         this.numCards = cardsColors.length * cardsValues.length + numJokers;
         this.numJokers = numJokers;
-        this.deck = this.#buildDeck(cardsValues, cardsColors, true);
         this.current = 0;
         this.initialSideCards = [];
-        this.initialCardsNumber = this.initialCardsNumber;
+        this.initialCardsNumber = initialCardsNumber;
+        this.deck = this.#buildDeck(cardsValues, cardsColors, true);
     }
 
     #buildDeck(cardsValues, cardsColors) {
@@ -23,7 +23,7 @@ export default class CardPack {
             }
         }
 
-        const shuffled = this.#shuffleDeck(deck);
+        let shuffled = this.#shuffleDeck(deck);
 
         for (let i = 0; i < this.initialCardsNumber; i++) {
             this.initialSideCards.push(shuffled.pop());

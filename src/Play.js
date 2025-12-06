@@ -1,11 +1,15 @@
 import Phaser from 'phaser';
 import { cardGridManager } from './cards/cardGridManager.js';
+import CardPack from './CardsController/CardPack.js';
+
 import { BettingUI } from './BettingUI.js';
 import confetti from 'canvas-confetti';
 import { Session } from './SessionController/Session.js';
 
 export class Play extends Phaser.Scene {
     cardGrid = null;
+    cardPack = null;
+    cards = null;
     bettingUI = null;
     session = null;
 
@@ -127,14 +131,88 @@ export class Play extends Phaser.Scene {
             visibleColumns: 7
         });
 
-        this.cardGrid.createGrid();
 
+        this.cardPack = new CardPack(
+            ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"],
+            ["diamonds", "hearts", "clubs", "spades"],
+            4
+        );
+
+        this.cards = this.cardGrid.createGrid();
+
+        // Show pulled card
+        const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
+        card.setOrigin(0.5, 0.5);
+        card.setInteractive();
         this.session = new Session();
 
         this.bettingUI = new BettingUI(this);
         this.bettingUI.create();
 
         this.events.on('betConfirmed', this.handleBetConfirmed, this);
+    }
+
+    startGameTimer() {
+        let last_column = 0;
+        let timer = this.time.addEvent({
+            delay: 1000,
+            callback: function ()
+            {
+                // sprawdzanie konca gry bo musi byc na poczatku
+                for(let i = 0; i < 4; i++) {
+                    console.log(this.cardGrid.getCardAt(i, 6));
+                    if (this.cardGrid.getCardAt(i, 6) != null) {
+                        timer.remove();
+                        return;
+                    }
+                }
+                
+                let suits = ["diamonds", "clubs", "hearts", "spades"];
+                // sprawdzanie czy jest jakis row zwolniony
+                let counter = 0;
+                for (let j = 0; j <= last_column; j++) {
+                    for(let i = 0; i < 4; i++) {
+                        if (this.cardGrid.getCardAt(i, last_column) == null) {
+                            counter++;
+                        }
+                    }
+                }
+                if (counter == (1+last_column)*4) {
+                    let sideCard = this.cardPack.initialSideCards[last_column];
+                    const cardData = {
+                        type: sideCard.color + sideCard.value
+                    }
+                    //this.cardGrid.createCard(4, last_column+1, cardData);
+                    this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value)
+                    
+                    last_column++;
+                    this.cardGrid.moveCard(suits.indexOf(sideCard.color), false);
+                    return;
+                }
+                
+                
+                // losowanie karty z decku
+                let pulled_card = this.cardPack.getNext();
+                
+                if (pulled_card.color != "JOKER") {
+                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', pulled_card.color + pulled_card.value).setScale(0.75);
+                    this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
+                } else {
+                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "joker").setScale(0.75);
+                    // TODO: mechanika jokerow
+                }
+                
+                // sprawdzanie konca gry drugi raz bo nie bedzie timer delaya
+                for(let i = 0; i < 4; i++) {
+                    if (this.cardGrid.getCardAt(i, 6) != null) {
+                        timer.remove();
+                        return;
+                    }
+                }
+            },
+            callbackScope: this,
+            loop: true
+        });
     }
 
     handleBetConfirmed(bets) {
@@ -151,7 +229,9 @@ export class Play extends Phaser.Scene {
             this.session.placeBet(3, bets[3]);
         }
         this.bettingUI.hide();
-        this.dealInitialCards();
+        this.dealInitialCards().then(() => {
+            this.startGameTimer();
+        });
         this.session.startRound();
     }
 
@@ -246,10 +326,7 @@ export class Play extends Phaser.Scene {
         // Deal the initial row cards first
         for (let row = 0; row < 4; row++) {
             const cardData = {
-                type: suits[row],
-                onClick: (card) => {
-                    this.cardGrid.moveCard(row, true);
-                }
+                type: suits[row]
             };
 
             await this.dealCardFromDeck(row, 0, cardData);
@@ -262,10 +339,7 @@ export class Play extends Phaser.Scene {
         // Then deal the column cards
         for (let col = 1; col < 6; col++) {
             const cardData = {
-                type: 'back',
-                onClick: (card) => {
-                    // Row 4 cards - could add different behavior if needed
-                }
+                type: 'back'
             };
 
             await this.dealCardFromDeck(4, col, cardData);
@@ -328,7 +402,7 @@ export class Play extends Phaser.Scene {
         });
 
         // Trigger the jackpot sequence
-        this.triggerJackpot();
+        //this.triggerJackpot();
     }
 
     triggerJackpot()

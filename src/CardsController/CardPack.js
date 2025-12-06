@@ -2,13 +2,13 @@ import Card from './Card.js';
 
 class CardPack {
     constructor(cardsValues, cardsColors, numJokers) {
-        this.numCards = cardsColors.length * cardsValues.length;
+        this.numCards = cardsColors.length * cardsValues.length + numJokers;
         this.numJokers = numJokers;
-        this.deck = this.buildDeck(cardsValues, cardsColors);
+        this.deck = this.#buildDeck(cardsValues, cardsColors);
         this.current = 0;
     }
 
-    buildDeck(cardsValues, cardsColors) {
+    #buildDeck(cardsValues, cardsColors) {
         const deck = [];
         
         let id = 0;
@@ -16,13 +16,13 @@ class CardPack {
         for (let color of cardsColors) {
             for (let value of cardsValues) {
                 const cardId = id++;
-                const newCard = Card(cardId, color, value);
+                const newCard = new Card(cardId, color, value);
                 deck.push(newCard);
             }
         }
 
         for (let i = 0; i < this.numJokers; i++) {
-            const newJoker = Card(id++, 'JOKER', 'JOKER');
+            const newJoker = new Card(id++, 'JOKER', 'JOKER');
             deck.push(newJoker);
         }
 
@@ -46,7 +46,9 @@ class CardPack {
         if (this.current < this.numCards) {
             return this.deck[this.current++];
         } else {
-            throw new RangeError('Brak kart w talii!');
+            this.#shuffleDeck(this.deck);
+            this.current = 0;
+            return this.deck[this.current++];
         }
     }
 }

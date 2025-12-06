@@ -1,10 +1,3 @@
-// const cardColors = {
-//     KARO: 'Karo',
-//     KIER: 'Kier',
-//     PIK: 'Pik',
-//     TREFL: 'Trefl'
-// }
-
 export class Card {
     constructor(id, color, value) {
         this.id = id;
@@ -14,5 +7,9 @@ export class Card {
 
     toString() {
         return `Card(ID: ${this.id}, Color: ${this.color}, Value: ${this.value})`;
+    }
+
+    toSimpleString() {
+        return `${this.color} ${this.value}`;
     }
 }

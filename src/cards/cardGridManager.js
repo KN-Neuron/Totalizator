@@ -158,6 +158,10 @@ export class cardGridManager {
         this.createGrid();
     }
 
+    changeCardAt(row, column, card) {
+        this.cardGrid[row][column].setTexture('cards', card)
+    }
+
     getCardAt(row, column) {
         return this.cardGrid[row][column];
     }

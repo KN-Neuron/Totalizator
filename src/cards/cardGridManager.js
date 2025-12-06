@@ -1,7 +1,6 @@
 export class cardGridManager {
     constructor(scene, config = {}) {
         this.scene = scene;
-
         this.config = {
             columns: 7,
             rows: 4,
@@ -97,9 +96,7 @@ export class cardGridManager {
         };
 
         if (cardData.onClick) {
-            card.on('pointerdown', () => {
-                cardData.onClick(card);
-            });
+            cardData.onClick(card);
         }
         
         this.cardGrid[row][column] = card;

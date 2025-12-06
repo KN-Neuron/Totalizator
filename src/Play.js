@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { cardGridManager } from './cards/cardGridManager.js';
+import { BettingUI } from './BettingUI.js';
 
 export class Play extends Phaser.Scene
 {
     cardGrid = null;
+    bettingUI = null;
 
     constructor ()
     {
@@ -79,10 +81,7 @@ export class Play extends Phaser.Scene
 
         for(let row = 0; row < 4; row++) {
             const cardData = {
-                type: suits[row],
-                onClick: (card) => {
-                    this.cardGrid.moveCardForward(row);
-                }
+                type: suits[row]
             }
 
             this.cardGrid.createCard(row, 0, cardData);
@@ -90,10 +89,7 @@ export class Play extends Phaser.Scene
 
         for(let col = 1; col < 7; col++) {
             const cardData = {
-                type: 'back',
-                onClick: (card) => {
-                    this.cardGrid.moveCardForward(row);
-                }
+                type: 'back'
             }
 
             this.cardGrid.createCard(4, col, cardData);
@@ -114,6 +110,9 @@ export class Play extends Phaser.Scene
 
         this.cards = this.cardGrid.createGrid();
         this.createInitialCards();
+
+        this.bettingUI = new BettingUI(this);
+        this.bettingUI.create();
 
         this.time.addEvent({
             delay: 500,

@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
 import { cardGridManager } from './cards/cardGridManager.js';
+import { BettingUI } from './BettingUI.js';
 import confetti from 'canvas-confetti';
 
 export class Play extends Phaser.Scene {
     cardGrid = null;
+    bettingUI = null;
 
     constructor() {
         super({
@@ -78,10 +80,7 @@ export class Play extends Phaser.Scene {
 
         for (let row = 0; row < 4; row++) {
             const cardData = {
-                type: suits[row],
-                onClick: (card) => {
-                    this.cardGrid.moveCard(row, true);
-                }
+                type: suits[row]
             }
 
             this.cardGrid.createCard(row, 0, cardData);
@@ -89,10 +88,7 @@ export class Play extends Phaser.Scene {
 
         for (let col = 1; col < 7; col++) {
             const cardData = {
-                type: 'back',
-                onClick: (card) => {
-                    // Row 4 cards - could add different behavior if needed
-                }
+                type: 'back'
             }
 
             this.cardGrid.createCard(4, col, cardData);
@@ -350,6 +346,12 @@ export class Play extends Phaser.Scene {
             ease: 'Power2'
         });
 
+        this.bettingUI = new BettingUI(this);
+        this.bettingUI.create();
+
+        this.time.addEvent({
+            delay: 500,
+            callback: function ()
         // Create the JACKPOT text with large, bold styling (initially invisible)
         const jackpotText = this.add.text(
             this.sys.game.scale.width / 2,

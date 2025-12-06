@@ -7,6 +7,7 @@ export class Play extends Phaser.Scene
 {
     cardGrid = null;
     cardPack = null;
+    cards = null;
 
     constructor ()
     {
@@ -82,21 +83,15 @@ export class Play extends Phaser.Scene
 
         for(let row = 0; row < 4; row++) {
             const cardData = {
-                type: suits[row],
-                onClick: (card) => {
-                    this.cardGrid.moveCardForward(row);
-                }
+                type: suits[row]
             }
 
             this.cardGrid.createCard(row, 0, cardData);
         }
 
-        for(let col = 1; col < 7; col++) {
+        for(let col = 1; col < 6; col++) {
             const cardData = {
-                type: 'back',
-                onClick: (card) => {
-                    this.cardGrid.moveCardForward(row);
-                }
+                type: 'back'
             }
 
             this.cardGrid.createCard(4, col, cardData);
@@ -116,25 +111,73 @@ export class Play extends Phaser.Scene
         });
 
         this.cardPack = new CardPack(
-            ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"],
-            ["D", "H", "C", "S"],
+            ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"],
+            ["diamonds", "hearts", "clubs", "spades"],
             4
         );
 
         this.cards = this.cardGrid.createGrid();
         this.createInitialCards();
 
-        this.time.addEvent({
+        // Show pulled card
+        const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
+        card.setOrigin(0.5, 0.5);
+        card.setInteractive();
+
+        let last_column = 0;
+
+        let timer = this.time.addEvent({
             delay: 1000,
             callback: function ()
-            {   
+            {
+                // sprawdzanie konca gry bo musi byc na poczatku
+                for(let i = 0; i < 4; i++) {
+                    console.log(this.cardGrid.getCardAt(i, 6));
+                    if (this.cardGrid.getCardAt(i, 6) != null) {
+                        timer.remove();
+                        return;
+                    }
+                }
+
                 let pulled_card = this.cardPack.getNext();
-                console.log(pulled_card);
-                let suits = ["D", "H", "C", "S"];
-                this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
+                let suits = ["diamonds", "hearts", "clubs", "spades"];
+
+                // sprawdzanie czy jest jakis row zwolniony
+                let counter = 0;
+                for(let i = 0; i < 4; i++) {
+                    if (this.cardGrid.getCardAt(i, last_column) == null) {
+                        counter++;
+                    }
+                }
+                if (counter == 4) {
+                    const cardData = {
+                        type: pulled_card.color + pulled_card.value
+                    }
+                    this.cardGrid.createCard(4, last_column+1, cardData);
+                    last_column++;
+                    this.cardGrid.moveCard(suits.indexOf(pulled_card.color), false);
+                    return;
+                }
+                
+                // losowanie karty z decku
+                if (pulled_card.color != "JOKER") {
+                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', pulled_card.color + pulled_card.value).setScale(0.75);
+                    this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
+                } else {
+                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "joker").setScale(0.75);
+                    // TODO: mechanika jokerow
+                }
+                
+                // sprawdzanie konca gry drugi raz bo nie bedzie timer delaya
+                for(let i = 0; i < 4; i++) {
+                    if (this.cardGrid.getCardAt(i, 6) != null) {
+                        timer.remove();
+                        return;
+                    }
+                }
             },
             callbackScope: this,
-            repeat: 10
+            loop: true
         });
     }
 }

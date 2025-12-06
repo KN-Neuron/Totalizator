@@ -78,11 +78,10 @@ export class cardGridManager {
         }
 
         const { x, y } = this.gridPositions[row][column];
-        
-        console.log(this.scaleFactor)
+
         const card = this.scene.add.sprite(x, y, 'cards', cardData.type).setScale(0.75);
         card.setRotation(Phaser.Math.DegToRad(90));
-        
+
         card.setOrigin(0.5, 0.5);
 
         card.setInteractive();
@@ -98,9 +97,9 @@ export class cardGridManager {
         if (cardData.onClick) {
             cardData.onClick(card);
         }
-        
+
         this.cardGrid[row][column] = card;
-        
+
         return card;
     }
 

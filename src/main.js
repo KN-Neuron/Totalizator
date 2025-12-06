@@ -3,10 +3,10 @@ import { Play } from './Play';
 import Phaser from 'phaser';
 
 const config = {
-    title: 'Card Memory Game',
+    title: 'Gra totalizatora sportowego',
     type: Phaser.AUTO,
-    width: 549,
-    height: 480,
+    width: window.innerWidth,
+    height: window.innerHeight,
     parent: 'game-container',
     backgroundColor: '#192a56',
     pixelArt: true,

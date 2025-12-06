@@ -1,4 +1,4 @@
-export default class Session {
+export class Session {
     constructor (walletStatus =  5000, baseMultiplier = 2.25) {
         this.numTracks = 4;
         this.walletStatus = walletStatus;

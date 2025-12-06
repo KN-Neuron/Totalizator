@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import { cardGridManager } from './cards/cardGridManager.js';
 import { BettingUI } from './BettingUI.js';
 import confetti from 'canvas-confetti';
+import { Session } from './SessionController/Session.js';
 
 export class Play extends Phaser.Scene {
     cardGrid = null;
     bettingUI = null;
+    session = null;
 
     constructor() {
         super({
@@ -86,7 +88,7 @@ export class Play extends Phaser.Scene {
             this.cardGrid.createCard(row, 0, cardData);
         }
 
-        for (let col = 1; col < 7; col++) {
+        for (let col = 1; col < 6; col++) {
             const cardData = {
                 type: 'back'
             }
@@ -127,10 +129,30 @@ export class Play extends Phaser.Scene {
 
         this.cardGrid.createGrid();
 
-        this.dealInitialCards();
+        this.session = new Session();
 
         this.bettingUI = new BettingUI(this);
         this.bettingUI.create();
+
+        this.events.on('betConfirmed', this.handleBetConfirmed, this);
+    }
+
+    handleBetConfirmed(bets) {
+        if(bets['diamonds'] > 0) {
+            this.session.placeBet(0, bets[0]);
+        }
+        if(bets['hearts'] > 0) {
+            this.session.placeBet(1, bets[2]);
+        }
+        if(bets['clubs'] > 0) {
+            this.session.placeBet(2, bets[1]);
+        }
+        if(bets['spades'] > 0) {
+            this.session.placeBet(3, bets[3]);
+        }
+        this.bettingUI.hide();
+        this.dealInitialCards();
+        this.session.startRound();
     }
 
     dealCardFromDeck(row, col, cardData) {
@@ -238,7 +260,7 @@ export class Play extends Phaser.Scene {
         }
 
         // Then deal the column cards
-        for (let col = 1; col < 7; col++) {
+        for (let col = 1; col < 6; col++) {
             const cardData = {
                 type: 'back',
                 onClick: (card) => {

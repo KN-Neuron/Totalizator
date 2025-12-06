@@ -32,14 +32,17 @@ class CardPack {
     }
 
     #shuffleDeck(deck) {
-        const deck = [...deck]; 
+        const newDeck = [...deck]; 
 
-        for (let i = deck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+        for (let i = newDeck.length - 1; i > 0; i--) {
+            const randomBuffer = new Uint32Array(1);
+            window.crypto.getRandomValues(randomBuffer);
+
+            const j = Math.floor((randomBuffer[0] / (0xFFFFFFFF + 1)) * (i + 1));
     
-            [deck[i], deck[j]] = [deck[j], deck[i]];
+            [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
         }
-        return deck;
+        return newDeck;
     }
 
     getNext() {

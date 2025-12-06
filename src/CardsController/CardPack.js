@@ -1,11 +1,13 @@
 import Card from './Card.js';
 
-class CardPack {
-    constructor(cardsValues, cardsColors, numJokers) {
+export default class CardPack {
+    constructor(cardsValues, cardsColors, numJokers, initialCardsNumber = 5) {
         this.numCards = cardsColors.length * cardsValues.length + numJokers;
         this.numJokers = numJokers;
-        this.deck = this.#buildDeck(cardsValues, cardsColors);
+        this.deck = this.#buildDeck(cardsValues, cardsColors, true);
         this.current = 0;
+        this.initialSideCards = [];
+        this.initialCardsNumber = this.initialCardsNumber;
     }
 
     #buildDeck(cardsValues, cardsColors) {
@@ -21,12 +23,18 @@ class CardPack {
             }
         }
 
+        const shuffled = this.#shuffleDeck(deck);
+
+        for (let i = 0; i < this.initialCardsNumber; i++) {
+            this.initialSideCards.push(shuffled.pop());
+        }
+
         for (let i = 0; i < this.numJokers; i++) {
             const newJoker = new Card(id++, 'JOKER', 'JOKER');
             deck.push(newJoker);
         }
-
-        const shuffled = this.#shuffleDeck(deck);
+        
+        shuffled = this.#shuffleDeck(deck);
         
         return shuffled;
     }

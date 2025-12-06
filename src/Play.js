@@ -1,6 +1,12 @@
 import Phaser from 'phaser';
-export class Play extends Phaser.Scene {
-    constructor() {
+import { cardGridManager } from './cards/cardGridManager.js';
+
+export class Play extends Phaser.Scene
+{
+    cardGrid = null;
+
+    constructor ()
+    {
         super({
             key: 'Play'
         });
@@ -129,4 +135,3 @@ export class Play extends Phaser.Scene {
             }
         });
     }
-}

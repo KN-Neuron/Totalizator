@@ -27,6 +27,8 @@ export class Preloader extends Phaser.Scene
 
         this.load.atlas('cards', 'cards/cards.png', 'cards/cards.json');
 
+        this.load.video('smok', 'Smok_Srajacy_Pieniedzmi_Na_Sloty.mp4');
+
         this.load.image("heart", "ui/heart.png");
 
     }

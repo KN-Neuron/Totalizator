@@ -103,24 +103,6 @@ export class Play extends Phaser.Scene
 
     startGame ()
     {
-        // Create video but make it invisible initially
-        this.video = this.add.video(window.innerWidth / 2, window.innerHeight / 2, 'smok').setScale(1.3);
-        this.video.setAlpha(0); // Initially invisible
-        this.video.play();
-
-        // Show JACKPOT popup first
-        this.showJackpotPopup();
-
-        // Fade in the video after a short delay
-        this.time.delayedCall(500, () => {
-            this.tweens.add({
-                targets: this.video,
-                alpha: 1,
-                duration: 1000,
-                ease: 'Power2'
-            });
-        });
-
         this.cardGrid = new cardGridManager(this, {
             rows: 5,
             columns: 7,
@@ -143,6 +125,30 @@ export class Play extends Phaser.Scene
             callbackScope: this,
             repeat: 10
         });
+
+        // Trigger the jackpot sequence
+        this.triggerJackpot();
+    }
+
+    triggerJackpot()
+    {
+        // Create video but make it invisible initially
+        this.video = this.add.video(window.innerWidth / 2, window.innerHeight / 2, 'smok').setScale(1.3);
+        this.video.setAlpha(0); // Initially invisible
+        this.video.play();
+
+        // Show JACKPOT popup first
+        this.showJackpotPopup();
+
+        // Fade in the video after a short delay
+        this.time.delayedCall(500, () => {
+            this.tweens.add({
+                targets: this.video,
+                alpha: 1,
+                duration: 1000,
+                ease: 'Power2'
+            });
+        });
     }
 
     showJackpotPopup()
@@ -154,13 +160,13 @@ export class Play extends Phaser.Scene
             this.sys.game.scale.width,
             this.sys.game.scale.height,
             0x000000
-        ).setDepth(100).setAlpha(0);
+        ).setDepth(100).setAlpha(50);
 
         // Fade in the overlay
         this.tweens.add({
             targets: overlay,
-            alpha: 0.8,
-            duration: 500,
+            alpha: 0.3,
+            duration: 999,
             ease: 'Power2'
         });
 
@@ -268,16 +274,17 @@ export class Play extends Phaser.Scene
 
     startConfettiEffect()
     {
-        // Configure confetti options
+        // Configure confetti options - make them more prominent
         const confettiSettings = {
-            particleCount: 150,
-            spread: 180,
+            particleCount: 1000, // Increased particle count
+            spread: 250,
             origin: { y: 0 }, // Start from the top
-            colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'],
+            colors: ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffff00'],
             shapes: ['circle', 'square'],
             gravity: 0.8,
-            ticks: 200,
-            scalar: 1.2
+            ticks: 2000,
+            scalar: 1.2,
+            zIndex: 12 // Higher than our other elements
         };
 
         // Create the main confetti burst
@@ -287,7 +294,7 @@ export class Play extends Phaser.Scene
         setTimeout(() => {
             confetti({
                 ...confettiSettings,
-                particleCount: 100,
+                particleCount: 80,
                 angle: 60,
                 spread: 55,
                 origin: { x: 0 } // Left side
@@ -297,11 +304,112 @@ export class Play extends Phaser.Scene
         setTimeout(() => {
             confetti({
                 ...confettiSettings,
-                particleCount: 100,
+                particleCount: 80,
                 angle: 120,
                 spread: 55,
                 origin: { x: 1 } // Right side
             });
         }, 300);
+
+        // Create coin falling effects - MANY MORE and much smaller
+        this.createCoinFalling();
+
+        // Create rapid explosion effects - 3 in quick succession
+        this.createRapidExplosions();
+
+        // Play jackpot sound effect
+        this.sound.play('victory', { volume: 0.7 });
+    }
+
+    createCoinFalling()
+    {
+        // Create MANY MORE smaller coins - starting from above the screen area
+        for (let i = 0; i < 500; i++) {  // Increased from 20 to 50
+            const x = Phaser.Math.Between(20, this.sys.game.config.width - 20);
+            const startY = Phaser.Math.Between(-200, -50); // Start coins from different high positions
+
+            // Create a coin at a random position above the screen
+            const coin = this.add.sprite(x, startY, 'coin')
+                .setDepth(98)
+                .setScale(0.1); // MUCH smaller scale
+
+            // Add rotation animation to simulate spinning
+            this.tweens.add({
+                targets: coin,
+                angle: 720, // Rotate twice as much for more spinning effect
+                duration: Phaser.Math.Between(2000, 4000),
+                repeat: -1,
+                ease: 'Linear'
+            });
+
+            // Make the coin fall with acceleration
+            this.tweens.add({
+                targets: coin,
+                y: this.sys.game.config.height + 20,
+                duration: Phaser.Math.Between(3000, 7000),
+                ease: 'Cubic.easeIn',
+                onComplete: () => {
+                    coin.destroy();
+                }
+            });
+
+            // Add slight horizontal movement for more natural falling
+            this.tweens.add({
+                targets: coin,
+                x: x + Phaser.Math.Between(-50, 50),
+                duration: Phaser.Math.Between(3000, 7000),
+                ease: 'Cubic.easeIn',
+                repeat: 0
+            });
+        }
+    }
+
+    createRapidExplosions()
+    {
+        // Create 3 explosions happening in quick interval as requested
+        for (let i = 0; i < 3; i++) {
+            this.time.delayedCall(i * 300, () => { // Every 300ms
+                const x = Phaser.Math.Between(150, this.sys.game.config.width - 150);
+                const y = Phaser.Math.Between(150, this.sys.game.config.height - 150);
+
+                this.createExplosion(x, y);
+
+                // Play explosion sound
+                this.sound.play('explosion', { volume: 0.6 });
+            });
+        }
+
+        // Additional random explosions
+        for (let i = 0; i < 5; i++) {
+            const x = Phaser.Math.Between(100, this.sys.game.config.width - 100);
+            const y = Phaser.Math.Between(100, this.sys.game.config.height - 100);
+
+            this.time.delayedCall(Phaser.Math.Between(500, 2000), () => {
+                this.createExplosion(x, y);
+                // Play explosion sound
+                this.sound.play('explosion', { volume: 0.6 });
+            });
+        }
+    }
+
+    createExplosion(x, y)
+    {
+        // Create an explosion sprite with bigger scale
+        const explosionSprite = this.add.sprite(x, y, 'explosion')
+            .setDepth(102)  // Higher depth to be on top
+            .setScale(1.0)  // Much bigger explosion
+            .setAlpha(0.9);
+
+        // Add animation to the explosion
+        this.tweens.add({
+            targets: explosionSprite,
+            scale: 1.5,
+            alpha: 0,
+            duration: 800,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                explosionSprite.destroy();
+            }
+        });
     }
 }

@@ -20,7 +20,7 @@ export class Play extends Phaser.Scene
     create ()
     {
         // Background image
-        this.add.image(0, 0, "background").setOrigin(0);
+        this.add.image(0, 0, "background").setOrigin(0).setScale(0.6);
 
         const titleText = this.add.text(this.sys.game.scale.width / 2, this.sys.game.scale.height / 2,
             "Gra totalizatora sportowego\nNacisnij aby zaczac",
@@ -119,5 +119,18 @@ export class Play extends Phaser.Scene
             y: 100
         });
 
+        this.cards = this.cardGrid.createGrid();
+        this.createInitialCards();
+
+        this.time.addEvent({
+            delay: 1000,
+            callback: function ()
+            {
+                this.cardGrid.moveCard(Math.floor(Math.random() * 4));
+                this.sound.play("whoosh", { volume: 1.3 });
+            },
+            callbackScope: this,
+            repeat: 50
+        });
     }
 }

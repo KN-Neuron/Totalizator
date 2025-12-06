@@ -128,6 +128,9 @@ export class Play extends Phaser.Scene {
         this.cardGrid.createGrid();
 
         this.dealInitialCards();
+
+        this.bettingUI = new BettingUI(this);
+        this.bettingUI.create();
     }
 
     dealCardFromDeck(row, col, cardData) {
@@ -346,12 +349,6 @@ export class Play extends Phaser.Scene {
             ease: 'Power2'
         });
 
-        this.bettingUI = new BettingUI(this);
-        this.bettingUI.create();
-
-        this.time.addEvent({
-            delay: 500,
-            callback: function ()
         // Create the JACKPOT text with large, bold styling (initially invisible)
         const jackpotText = this.add.text(
             this.sys.game.scale.width / 2,

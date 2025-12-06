@@ -81,7 +81,7 @@ export class Play extends Phaser.Scene
 
         for (var i = 0; i < 30; i++)
         {
-            cards.push(this.add.sprite(0, 0, 'cards', Phaser.Math.RND.pick(frames)));
+            cards.push(this.add.sprite(0, 0, 'cards', Phaser.Math.RND.pick(frames)).setScale(0.5));
         }
 
         //  The cards are 140x190 in size
@@ -91,8 +91,8 @@ export class Play extends Phaser.Scene
         Phaser.Actions.GridAlign(cards, {
             width: 6,
             height: 5,
-            cellWidth: 150,
-            cellHeight: 200,
+            cellWidth: 80,
+            cellHeight: 105,
             x: 100,
             y: 100
         });

@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 import { cardGridManager } from './cards/cardGridManager.js';
+import { CardPack } from './CardsController/CardPack.js';
+
 
 export class Play extends Phaser.Scene
 {
     cardGrid = null;
+    cardPack = null;
 
     constructor ()
     {
@@ -112,14 +115,23 @@ export class Play extends Phaser.Scene
             visibleColumns: 7
         });
 
+        this.cardPack = new CardPack(
+            ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"],
+            ["D", "H", "C", "S"],
+            4
+        );
+
         this.cards = this.cardGrid.createGrid();
         this.createInitialCards();
 
         this.time.addEvent({
-            delay: 500,
+            delay: 1000,
             callback: function ()
-            {
-                this.cardGrid.moveCard(Math.floor(Math.random() * 4));
+            {   
+                let pulled_card = this.cardPack.getNext();
+                console.log(pulled_card);
+                let suits = ["D", "H", "C", "S"];
+                this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
             },
             callbackScope: this,
             repeat: 10

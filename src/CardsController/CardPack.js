@@ -1,6 +1,6 @@
 import Card from './Card.js';
 
-class CardPack {
+export class CardPack {
     constructor(cardsValues, cardsColors, numJokers) {
         this.numCards = cardsColors.length * cardsValues.length + numJokers;
         this.numJokers = numJokers;

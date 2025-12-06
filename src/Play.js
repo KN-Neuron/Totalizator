@@ -195,10 +195,52 @@ export class Play extends Phaser.Scene {
                 let pulled_card = this.cardPack.getNext();
 
                 if (pulled_card.color != "JOKER") {
-                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', pulled_card.color + pulled_card.value).setScale(0.75);
+                    // Create card with initial back texture for flip animation
+                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
+                    
+                    // Create flip animation
+                    this.tweens.add({
+                        targets: card,
+                        scaleX: 0,
+                        duration: 200,
+                        ease: 'Power2',
+                        onComplete: () => {
+                            // Change the texture when the card is flipped
+                            card.setTexture('cards', pulled_card.color + pulled_card.value);
+                            // Then flip the card back to normal
+                            this.tweens.add({
+                                targets: card,
+                                scaleX: 0.75,
+                                duration: 200,
+                                ease: 'Power2'
+                            });
+                        }
+                    });
+                    
                     this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
                 } else {
-                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "joker").setScale(0.75);
+                    // Create joker card with flip animation
+                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
+                    
+                    // Create flip animation for joker
+                    this.tweens.add({
+                        targets: card,
+                        scaleX: 0,
+                        duration: 200,
+                        ease: 'Power2',
+                        onComplete: () => {
+                            // Change the texture when the card is flipped
+                            card.setTexture('cards', "joker");
+                            // Then flip the card back to normal
+                            this.tweens.add({
+                                targets: card,
+                                scaleX: 0.75,
+                                duration: 200,
+                                ease: 'Power2'
+                            });
+                        }
+                    });
+                    
                     // TODO: mechanika jokerow
                 }
 

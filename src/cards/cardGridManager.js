@@ -159,7 +159,27 @@ export class cardGridManager {
     }
 
     changeCardAt(row, column, card) {
-        this.cardGrid[row][column].setTexture('cards', card)
+        const targetCard = this.cardGrid[row][column];
+        if (targetCard) {
+            // First, flip the card to show its actual type
+            this.scene.tweens.add({
+                targets: targetCard,
+                scaleX: 0,
+                duration: 150,
+                ease: 'Power2',
+                onComplete: () => {
+                    // Change the texture when the card is flipped
+                    targetCard.setTexture('cards', card);
+                    // Then flip the card back to normal
+                    this.scene.tweens.add({
+                        targets: targetCard,
+                        scaleX: 0.75,
+                        duration: 150,
+                        ease: 'Power2'
+                    });
+                }
+            });
+        }
     }
 
     getCardAt(row, column) {

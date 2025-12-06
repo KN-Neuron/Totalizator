@@ -115,6 +115,14 @@ export class Play extends Phaser.Scene
         this.cards = this.cardGrid.createGrid();
         this.createInitialCards();
 
-        this.cardGrid.moveCard(1)
+        this.time.addEvent({
+            delay: 500,
+            callback: function ()
+            {
+                this.cardGrid.moveCard(Math.floor(Math.random() * 4));
+            },
+            callbackScope: this,
+            repeat: 10
+        });
     }
 }

@@ -172,7 +172,7 @@ export class Play extends Phaser.Scene {
                 let counter = 0;
                 for (let j = 0; j <= last_column; j++) {
                     for(let i = 0; i < 4; i++) {
-                        if (this.cardGrid.getCardAt(i, last_column) == null) {
+                        if (this.cardGrid.getCardAt(i, j) == null) {
                             counter++;
                         }
                     }
@@ -687,4 +687,5 @@ export class Play extends Phaser.Scene {
             }
         });
     }
+
 }

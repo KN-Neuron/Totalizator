@@ -25,6 +25,7 @@ export class Preloader extends Phaser.Scene
         this.load.audio("victory", "audio/victory.mp3");
         this.load.audio("explosion", "explosion.mp3");
         this.load.image("background");
+        this.load.image("grid");
 
         this.load.atlas('cards', 'cards/cards.png', 'cards/cards.json');
 

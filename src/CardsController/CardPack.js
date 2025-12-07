@@ -52,12 +52,12 @@ export default class CardPack {
         }
 
         // ALWAYS JACKPOT FOR DEBUGGING
-        newDeck[0] = new Card(0, 'hearts', 'Ace');
-        newDeck[1] = new Card(0, 'hearts', 'Ace');
-        newDeck[2] = new Card(0, 'hearts', 'Ace');
-        newDeck[3] = new Card(0, 'hearts', 'Ace');
-        newDeck[4] = new Card(0, 'hearts', 'Ace');
-        newDeck[5] = new Card(0, 'hearts', 'Ace');
+        // newDeck[0] = new Card(0, 'hearts', 'Ace');
+        // newDeck[1] = new Card(0, 'hearts', 'Ace');
+        // newDeck[2] = new Card(0, 'hearts', 'Ace');
+        // newDeck[3] = new Card(0, 'hearts', 'Ace');
+        // newDeck[4] = new Card(0, 'hearts', 'Ace');
+        // newDeck[5] = new Card(0, 'hearts', 'Ace');
 
         return newDeck;
     }

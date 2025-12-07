@@ -49,8 +49,8 @@ export class Play extends Phaser.Scene {
             .setInteractive();
 
         // Add registration text at the bottom with button-like background
-        const registrationY = this.sys.game.scale.height - 250; // Move it higher up to bottom
-        const registrationText = this.add.text(this.sys.game.scale.width / 2, registrationY,
+                const registrationY = this.sys.game.scale.height - 250; // Move it higher up to bottom
+        this.registrationText = this.add.text(window.innerWidth / 2, registrationY,
             "Kliknij aby się zarejestrować i zyskać darmowe 50 zł na start",
             { align: "center", fontSize: 20, fontStyle: "normal", color: "#ffffff" } // White text
         )
@@ -58,10 +58,10 @@ export class Play extends Phaser.Scene {
             .setDepth(4); // Higher depth to be above background
 
         // Create rounded button background with dark color
-        const textWidth = registrationText.width + 30; // Add some padding
-        const textHeight = registrationText.height + 15; // Add some padding
+        const textWidth = this.registrationText.width + 30; // Add some padding
+        const textHeight = this.registrationText.height + 15; // Add some padding
 
-        const buttonBg = this.add.graphics()
+        this.buttonBg = this.add.graphics()
             .setDepth(3); // Behind the text
 
         // Draw rounded rectangle
@@ -69,22 +69,22 @@ export class Play extends Phaser.Scene {
         const y = registrationY - textHeight / 2;
         const radius = 10; // Corner radius
 
-        buttonBg.fillStyle(0x2c3e50) // Dark blue-gray color
+        this.buttonBg.fillStyle(0x2c3e50) // Dark blue-gray color
             .fillRoundedRect(x, y, textWidth, textHeight, radius);
 
         // Make button interactive
-        buttonBg.setInteractive({
+        this.buttonBg.setInteractive({
             hitArea: new Phaser.Geom.Rectangle(x, y, textWidth, textHeight),
             hitAreaCallback: Phaser.Geom.Rectangle.Contains,
             useHandCursor: true
         })
             .on('pointerover', () => {
-                buttonBg.clear()
+                this.buttonBg.clear()
                     .fillStyle(0x34495e) // Slightly lighter dark on hover
                     .fillRoundedRect(x, y, textWidth, textHeight, radius);
             })
             .on('pointerout', () => {
-                buttonBg.clear()
+                this.buttonBg.clear()
                     .fillStyle(0x2c3e50) // Original dark color
                     .fillRoundedRect(x, y, textWidth, textHeight, radius);
             });
@@ -178,6 +178,8 @@ export class Play extends Phaser.Scene {
 
                     this.input.setDefaultCursor('default');
 
+                    this.hideRegistrationButton(); // Hide the registration button when game starts
+
                     this.startGame();
                 }
             })
@@ -188,6 +190,15 @@ export class Play extends Phaser.Scene {
     restartGame() {
         this.cameras.main.fadeOut(200 * this.cards.length);
         this.startGame();
+    }
+
+    hideRegistrationButton() {
+        if (this.registrationText && typeof this.registrationText.setVisible === 'function') {
+            this.registrationText.setVisible(false);
+        }
+        if (this.buttonBg && typeof this.buttonBg.setVisible === 'function') {
+            this.buttonBg.setVisible(false);
+        }
     }
 
     createInitialCards() {
@@ -250,8 +261,8 @@ export class Play extends Phaser.Scene {
 
         this.cards = this.cardGrid.createGrid();
 
-        // Show pulled card
-        const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
+        // Show pulled card (without grid initially)
+        const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75).setDepth(10); // Above grid and other background elements
         card.setOrigin(0.5, 0.5);
         card.setInteractive();
         this.session = new Session(this.wallet);
@@ -644,37 +655,37 @@ export class Play extends Phaser.Scene {
         return new Promise((resolve) => {
             // 1. Fade out całego ekranu
             this.cameras.main.fadeOut(500);
-            
+
             // 2. Po zakończeniu fade out, wyczyść wszystko
             this.cameras.main.once('camerafadeoutcomplete', () => {
                 // Zatrzymaj wszystkie animacje
                 this.tweens.killAll();
                 this.time.removeAllEvents();
-                
+
                 // Usuń wszystkie obiekty (oprócz kamery)
                 this.children.removeAll();
-                
+
                 // Zresetuj komponenty
                 if (this.bettingUI) {
                     this.bettingUI.destroy();
                     this.bettingUI = null;
                 }
-                
+
                 if (this.cardGrid) {
                     this.cardGrid.destroy();
                     this.cardGrid = null;
                 }
-                
+
                 // Reset zmiennych
                 this.cardPack = null;
                 this.cards = null;
                 this.deckCards = [];
                 this.betStatusTexts = [];
                 this.betStatusContainer = null;
-                
+
                 // Fade in
                 this.cameras.main.fadeIn(300);
-                
+
                 resolve();
             });
         });
@@ -749,6 +760,23 @@ export class Play extends Phaser.Scene {
             this.session.placeBet(3, bets['spades']);
         }
         this.bettingUI.hide();
+
+        // Add the grid behind the cards but above background (only after bet is placed)
+        // Get the position from the first cell of the grid for proper alignment
+        if (this.cardGrid && this.cardGrid.gridPositions && this.cardGrid.gridPositions[0] && this.cardGrid.gridPositions[0][0]) {
+            const firstCell = this.cardGrid.gridPositions[0][0];
+            // Calculate top-left position of the entire grid area
+            const cellWidth = this.cardGrid.actualCardWidth || 150;
+            const cellHeight = this.cardGrid.actualCardHeight || 100;
+            const gridStartX = firstCell.x - (cellWidth / 2);
+            const gridStartY = firstCell.y - (cellHeight / 2);
+
+            this.gridImage = this.add.image(gridStartX + 20, gridStartY - 30, "grid")
+                .setOrigin(0, 0)
+                .setDepth(1) // Above background but below game cards and UI elements
+                .setScale(0.83, 0.85); // Scale to 90% in X and 85% in Y
+        }
+
         this.session.startRound();
         this.updateWalletDisplay();
         this.dealInitialCards().then(() => {
@@ -1828,18 +1856,18 @@ export class Play extends Phaser.Scene {
     // Tworzenie przycisku dla ekranu końcowego
     createEndScreenButton(x, y, width, height, color, text, onClick) {
         const container = this.add.container(x, y);
-        
+
         // Tło przycisku
         const buttonBg = this.add.graphics();
         buttonBg.fillStyle(color, 1);
         buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
-        
+
         // Obramowanie
         buttonBg.lineStyle(2, 0xffffff, 1);
         buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
-        
+
         container.add(buttonBg);
-        
+
         // Tekst przycisku
         const buttonText = this.add.text(0, 0, text, {
             fontSize: '18px',
@@ -1850,11 +1878,11 @@ export class Play extends Phaser.Scene {
             strokeThickness: 2
         }).setOrigin(0.5);
         container.add(buttonText);
-        
+
         // Interaktywność
         const hitArea = new Phaser.Geom.Rectangle(-width/2, -height/2, width, height);
         container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
-        
+
         // Efekty hover
         container.on('pointerover', () => {
             buttonBg.clear();
@@ -1862,54 +1890,54 @@ export class Play extends Phaser.Scene {
             buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
             buttonBg.lineStyle(2, 0xffffff, 1);
             buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
-            
+
             this.tweens.add({
                 targets: container,
                 scale: 1.05,
                 duration: 100,
                 ease: 'Power2'
             });
-            
+
             this.input.setDefaultCursor('pointer');
         });
-        
+
         container.on('pointerout', () => {
             buttonBg.clear();
             buttonBg.fillStyle(color, 1);
             buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
             buttonBg.lineStyle(2, 0xffffff, 1);
             buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
-            
+
             this.tweens.add({
                 targets: container,
                 scale: 1,
                 duration: 100,
                 ease: 'Power2'
             });
-            
+
             this.input.setDefaultCursor('default');
         });
-        
+
         container.on('pointerdown', () => {
             buttonBg.clear();
             buttonBg.fillStyle(color, 0.6);
             buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
             buttonBg.lineStyle(2, 0xffffff, 1);
             buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
-            
+
             this.sound.play('click', { volume: 0.3 });
         });
-        
+
         container.on('pointerup', () => {
             buttonBg.clear();
             buttonBg.fillStyle(color, 0.8);
             buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
             buttonBg.lineStyle(2, 0xffffff, 1);
             buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
-            
+
             onClick();
         });
-        
+
         return {
             container: container,
             background: buttonBg,
@@ -1922,11 +1950,11 @@ export class Play extends Phaser.Scene {
             const coin = this.add.sprite(x + Phaser.Math.Between(-200, 200), y - 100, 'coin')
                 .setScale(0.05)
                 .setDepth(1000);
-            
+
             const angle = Phaser.Math.Between(-30, 30);
             const distance = Phaser.Math.Between(100, 200);
             const duration = Phaser.Math.Between(800, 1200);
-            
+
             this.tweens.add({
                 targets: coin,
                 x: coin.x + Math.cos(Phaser.Math.DegToRad(angle)) * distance,

@@ -262,7 +262,7 @@ export class Play extends Phaser.Scene {
         this.cards = this.cardGrid.createGrid();
 
         // Show pulled card (without grid initially)
-        const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75).setDepth(10); // Above grid and other background elements
+        const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75).setDepth(0); // Above grid and other background elements
         card.setOrigin(0.5, 0.5);
         card.setInteractive();
         this.session = new Session(this.wallet);

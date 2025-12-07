@@ -89,6 +89,57 @@ export class Play extends Phaser.Scene {
                     .fillRoundedRect(x, y, textWidth, textHeight, radius);
             });
 
+        // Help / Guide button (Phaser-rendered) - opens public/guide.html in new tab
+        const helpX = this.sys.game.scale.width - 140; // position near top-right
+        const helpY = 60;
+        const helpWidth = 120;
+        const helpHeight = 36;
+        const helpRadius = 10;
+
+        const helpContainer = this.add.container(helpX, helpY).setDepth(5);
+
+        const helpBg = this.add.graphics();
+        helpBg.fillStyle(0x8c7ae6, 1);
+        helpBg.fillRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+        helpBg.lineStyle(2, 0xffffff, 0.15);
+        helpBg.strokeRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+        helpContainer.add(helpBg);
+
+        const helpText = this.add.text(0, 0, "INSTRUKCJA", {
+            fontSize: '14px',
+            fontFamily: 'Arial',
+            color: "#ffffff",
+            fontStyle: "bold",
+            stroke: "#000000",
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        helpContainer.add(helpText);
+
+        const helpHitArea = new Phaser.Geom.Rectangle(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight);
+        helpContainer.setInteractive(helpHitArea, Phaser.Geom.Rectangle.Contains);
+
+        helpContainer.on(Phaser.Input.Events.POINTER_OVER, () => {
+            helpBg.clear();
+            helpBg.fillStyle(0x9c88ff, 1);
+            helpBg.fillRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            helpBg.lineStyle(2, 0xffffff, 0.18);
+            helpBg.strokeRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            this.input.setDefaultCursor("pointer");
+        });
+
+        helpContainer.on(Phaser.Input.Events.POINTER_OUT, () => {
+            helpBg.clear();
+            helpBg.fillStyle(0x8c7ae6, 1);
+            helpBg.fillRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            helpBg.lineStyle(2, 0xffffff, 0.15);
+            helpBg.strokeRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            this.input.setDefaultCursor("default");
+        });
+
+        helpContainer.on(Phaser.Input.Events.POINTER_UP, () => {
+            window.open('/guide.html', '_blank', 'noopener');
+        });
+
         // title tween like retro arcade
         // this.add.tween({
         //

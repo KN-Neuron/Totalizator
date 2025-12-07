@@ -353,7 +353,7 @@ export class Play extends Phaser.Scene {
                 } else {
                     // TODO: Jokery
                     // check game state
-                    let jokerGameState = 2;
+                    let jokerGameState = 1;
                     let betOnCards = []
                     console.log(this.session.currentUserBets);
                     for (let i = 0; i < 4; i++) {
@@ -382,7 +382,7 @@ export class Play extends Phaser.Scene {
                             getOut = true;
                             if (!betOnCards.includes(sureSuit)) {
                                 leaderSuit = sureSuit;
-                                jokerGameState = 4;
+                                jokerGameState = 3;
                             }
                         }
                         if (getOut) {
@@ -396,7 +396,7 @@ export class Play extends Phaser.Scene {
                     console.log("jokerGameState: ", jokerGameState);
                     //jokerFunction = 2; // DEBUG
                     switch (jokerFunction) {
-                        case 0:
+                        case 0: // MULTIPLIER BOOST
                             console.log("JOKER 0") // jokery
                             const new_leader_info = this.getCurrentLeader();
                             const new_leader = new_leader_info.leader;
@@ -405,15 +405,13 @@ export class Play extends Phaser.Scene {
                             //this.session.updateMultiplier(new_leader, current_multiplier * 1.5);
                             //this.showLeaderBonus(new_leader);
                             // TODO: jakis efekt wow animacja mega bonusu prosto od smoka
-                        case 1:
+                        case 1: // ZAMIANA KART
                             // Wlozenie kart twojego koloru znowu do talii
                         case 2:
                             console.log("MOVE");
                             console.log(leaderSuit);
                             const suitIndex = suits.indexOf(leaderSuit);
                             this.cardGrid.moveCard(suitIndex, false)
-                        case 3:
-                            // Zamiana twojej z najdalsza
                     }
 
 

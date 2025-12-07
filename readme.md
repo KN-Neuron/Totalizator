@@ -41,3 +41,12 @@ To gra losowa oparta na wyścigu kart, podobna do obstawiania wyścigów koni. G
 3. Uruchom serwer deweloperski za pomocą `bun run dev` (lub `npm run dev`).
 4. Aby zbudować projekt, uruchom `bun run build` (lub `npm run build`).
 
+
+## Todo:
+- Slot machine gdy mamy wszystkie karty w rzędzie/kolumnie
+- Config aplikacji i stawek w JSON
+- Więcej UI i animacji
+- Więcej jokerów
+- Symulacje monte carlo
+- Multiplayer
+- Tablice wyników

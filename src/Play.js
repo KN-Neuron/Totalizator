@@ -337,86 +337,98 @@ export class Play extends Phaser.Scene {
         // Create a container for highlight lines
         this.highlightLinesContainer = this.add.container(0, 0);
 
-        let timer = this.time.addEvent({
-            delay: 1500,
-            callback: async function () {
+        // Store game state variables for manual card drawing
+        this.gameState = {
+            last_column: last_column,
+            last_to_move: last_to_move,
+            leader: leader,
+            leader_position: leader_position,
+            isGameActive: true
+        };
+
+        // Manual card drawing function
+        this.drawNextCard = async function () {
+            // Check if game is still active
+            if (!this.gameState.isGameActive) {
+                return;
+            }
+
+            let suits = ["diamonds", "clubs", "hearts", "spades"];
+
+            let counter = 0;
+            for (let j = 0; j <= this.gameState.last_column; j++) {
                 for(let i = 0; i < 4; i++) {
-                    if (this.cardGrid.getCardAt(i, 6) != null) {
-                        timer.remove();
-                        this.endGame(leader);
-                        return;
+                    if (this.cardGrid.getCardAt(i, j) == null) {
+                        counter++;
                     }
                 }
+            }
 
-                let suits = ["diamonds", "clubs", "hearts", "spades"];
-
-                let counter = 0;
-                for (let j = 0; j <= last_column; j++) {
-                    for(let i = 0; i < 4; i++) {
-                        if (this.cardGrid.getCardAt(i, j) == null) {
-                            counter++;
-                        }
-                    }
-                }
-
-                if (counter == (1+last_column)*4) {
-                    let sideCard = this.cardPack.initialSideCards[last_column];
+            if (counter == (1+this.gameState.last_column)*4) {
+                let sideCard = this.cardPack.initialSideCards[this.gameState.last_column];
                     const cardData = {
                         type: sideCard.color + sideCard.value
                     }
 
-                    // Create highlight line for the column where the side card will be revealed
-                    this.createHighlightLine(last_column + 1);
+                // Create highlight line for the column where the side card will be revealed
+                this.createHighlightLine(this.gameState.last_column + 1);
 
-                    this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value);
-                    const suitIndex = suits.indexOf(sideCard.color);
-                    this.cardGrid.moveCard(suitIndex, false, (card, row, newColumn) => {
-                        // Add jackpot logic for side cards: track consecutive moves
-                        if (this.lastMovedRow === suitIndex) {
-                            // Same row moved again - increment counter
-                            this.consecutiveMovesCount++;
-                        } else {
-                            // Different row - reset counter and start from 1
-                            this.consecutiveMovesCount = 1;
-                        }
+                this.cardGrid.changeCardAt(4, this.gameState.last_column+1, sideCard.color + sideCard.value);
+                const suitIndex = suits.indexOf(sideCard.color);
+                this.cardGrid.moveCard(suitIndex, false, (card, row, newColumn) => {
+                    // Check if card reached the finish line (column 6)
+                    if (newColumn === 6) {
+                        this.gameState.isGameActive = false;
+                        this.endGame(this.gameState.leader);
+                        return;
+                    }
 
-                        // Update the last moved row
-                        this.lastMovedRow = suitIndex;
+                    // Add jackpot logic for side cards: track consecutive moves
+                    if (this.lastMovedRow === suitIndex) {
+                        // Same row moved again - increment counter
+                        this.consecutiveMovesCount++;
+                    } else {
+                        // Different row - reset counter and start from 1
+                        this.consecutiveMovesCount = 1;
+                    }
 
-                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
-                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
-                            timer.remove();
-                            this.endGame(leader, true);
-                            // Reset the counter after triggering the jackpot
-                            this.consecutiveMovesCount = 0;
-                            this.lastMovedRow = -1;
-                            return;
-                        }
+                    // Update the last moved row
+                    this.lastMovedRow = suitIndex;
 
-                        last_to_move = -1;
+                    // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                    if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                        this.gameState.isGameActive = false;
+                        this.endGame(this.gameState.leader, true);
+                        // Reset the counter after triggering the jackpot
+                        this.consecutiveMovesCount = 0;
+                        this.lastMovedRow = -1;
+                        return;
+                    }
 
-                        const old_leader = leader;
-                        const old_leader_position = leader_position;
+                    this.gameState.last_to_move = -1;
 
-                        // UŻYJ NOWEJ METODY
-                        const moved_row = suitIndex;
-                        const new_leader_info = this.handleLeaderChange(
-                            old_leader,
-                            old_leader_position,
-                            moved_row
-                        );
+                    const old_leader = this.gameState.leader;
+                    const old_leader_position = this.gameState.leader_position;
 
-                        // Zaktualizuj zmienne
-                        leader = new_leader_info.leader;
-                        leader_position = new_leader_info.position;
-                    });
+                    // UŻYJ NOWEJ METODY
+                    const moved_row = suitIndex;
+                    const new_leader_info = this.handleLeaderChange(
+                        old_leader,
+                        old_leader_position,
+                        moved_row
+                    );
 
-                    last_column++;
-                    last_to_move = -1;
+                    // Zaktualizuj zmienne
+                    this.gameState.leader = new_leader_info.leader;
+                    this.gameState.leader_position = new_leader_info.position;
+                });
+
+                    this.gameState.last_column++;
+                    this.gameState.last_to_move = -1;
 
                     // The callback should have handled the jackpot logic, so we just continue with leader logic
-                    const old_leader = leader;
-                    const old_leader_position = leader_position;
+                    const old_leader = this.gameState.leader;
+                    const old_leader_position = this.gameState.leader_position;
 
                     // UŻYJ NOWEJ METODY
                     const moved_row = suits.indexOf(sideCard.color);
@@ -427,96 +439,103 @@ export class Play extends Phaser.Scene {
                     );
 
                     // Zaktualizuj zmienne
-                    leader = new_leader_info.leader;
-                    leader_position = new_leader_info.position;
+                    this.gameState.leader = new_leader_info.leader;
+                    this.gameState.leader_position = new_leader_info.position;
 
                     return;
                 }
 
                 // losowanie karty z decku
-                let pulled_card = this.cardPack.getNext();
+            let pulled_card = this.cardPack.getNext();
 
-                if (pulled_card.color != "JOKER") {
-                    const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
+            if (pulled_card.color != "JOKER") {
+                const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
 
-                    this.tweens.add({
-                        targets: card,
-                        scaleX: 0,
-                        duration: 200,
-                        ease: 'Power2',
-                        onComplete: () => {
-                            card.setTexture('cards', pulled_card.color + pulled_card.value);
-                            this.tweens.add({
-                                targets: card,
-                                scaleX: 0.75,
-                                duration: 200,
-                                ease: 'Power2'
-                            });
-                        }
-                    });
+                this.tweens.add({
+                    targets: card,
+                    scaleX: 0,
+                    duration: 200,
+                    ease: 'Power2',
+                    onComplete: () => {
+                        card.setTexture('cards', pulled_card.color + pulled_card.value);
+                        this.tweens.add({
+                            targets: card,
+                            scaleX: 0.75,
+                            duration: 200,
+                            ease: 'Power2'
+                        });
+                    }
+                });
 
-                    // Store the suit index for use in the callback
-                    const suitIndex = suits.indexOf(pulled_card.color);
-                    this.cardGrid.moveCard(suitIndex, true, (card, row, newColumn) => {
-                        if(last_to_move == suitIndex) {
-                            this.session.updateMultiplier(
-                                suitIndex,
-                                this.session.trackMultipliers[suitIndex] + 0.5
-                            );
-                            if(this.session.currentUserBets[suitIndex] > 0) {
-                                this.showComboBonus(suitIndex);
-                            }
-                        }
+                // Store the suit index for use in the callback
+                const suitIndex = suits.indexOf(pulled_card.color);
+                this.cardGrid.moveCard(suitIndex, true, (card, row, newColumn) => {
+                    // Check if card reached the finish line (column 6)
+                    if (newColumn === 6) {
+                        this.gameState.isGameActive = false;
+                        this.endGame(this.gameState.leader);
+                        return;
+                    }
 
-                        // Add jackpot logic: track consecutive moves
-                        if (this.lastMovedRow === suitIndex) {
-                            // Same row moved again - increment counter
-                            this.consecutiveMovesCount++;
-                        } else {
-                            // Different row - reset counter and start from 1
-                            this.consecutiveMovesCount = 1;
-                        }
-
-                        // Update the last moved row
-                        this.lastMovedRow = suitIndex;
-
-                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
-                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
-                            timer.remove();
-                            this.endGame(leader, true);
-                            // Reset the counter after triggering the jackpot
-                            this.consecutiveMovesCount = 0;
-                            this.lastMovedRow = -1;
-                            return;
-                        }
-
-                        last_to_move = suitIndex;
-                        const old_leader = leader;
-                        const old_leader_position = leader_position;
-
-                        const moved_row = suitIndex;
-                        const new_leader_info = this.handleLeaderChange(
-                            old_leader,
-                            old_leader_position,
-                            moved_row
+                    if(this.gameState.last_to_move == suitIndex) {
+                        this.session.updateMultiplier(
+                            suitIndex,
+                            this.session.trackMultipliers[suitIndex] + 0.5
                         );
+                        if(this.session.currentUserBets[suitIndex] > 0) {
+                            this.showComboBonus(suitIndex);
+                        }
+                    }
 
-                        leader = new_leader_info.leader;
-                        leader_position = new_leader_info.position;
-                    });
+                    // Add jackpot logic: track consecutive moves
+                    if (this.lastMovedRow === suitIndex) {
+                        // Same row moved again - increment counter
+                        this.consecutiveMovesCount++;
+                    } else {
+                        // Different row - reset counter and start from 1
+                        this.consecutiveMovesCount = 1;
+                    }
 
-                    const old_leader = leader;
-                    const old_leader_position = leader_position;
+                    // Update the last moved row
+                    this.lastMovedRow = suitIndex;
 
-                    const moved_row = suits.indexOf(pulled_card.color);
+                    // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                    if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                        this.gameState.isGameActive = false;
+                        this.endGame(this.gameState.leader, true);
+                        // Reset the counter after triggering the jackpot
+                        this.consecutiveMovesCount = 0;
+                        this.lastMovedRow = -1;
+                        return;
+                    }
+
+                    this.gameState.last_to_move = suitIndex;
+                    const old_leader = this.gameState.leader;
+                    const old_leader_position = this.gameState.leader_position;
+
+                    const moved_row = suitIndex;
                     const new_leader_info = this.handleLeaderChange(
                         old_leader,
                         old_leader_position,
                         moved_row
                     );
 
-                    leader = new_leader_info.leader;
-                    leader_position = new_leader_info.position;
+                    this.gameState.leader = new_leader_info.leader;
+                    this.gameState.leader_position = new_leader_info.position;
+                });
+
+                const old_leader = this.gameState.leader;
+                const old_leader_position = this.gameState.leader_position;
+
+                const moved_row = suits.indexOf(pulled_card.color);
+                const new_leader_info = this.handleLeaderChange(
+                    old_leader,
+                    old_leader_position,
+                    moved_row
+                );
+
+                this.gameState.leader = new_leader_info.leader;
+                this.gameState.leader_position = new_leader_info.position;
 
                 } else {
                     // TODO: Jokery
@@ -600,42 +619,112 @@ export class Play extends Phaser.Scene {
                         }
                     });
 
-                    // Joker breaks the consecutive move sequence
-                    this.lastMovedRow = -1;
-                    this.consecutiveMovesCount = 0;
+                // Joker breaks the consecutive move sequence
+                this.lastMovedRow = -1;
+                this.consecutiveMovesCount = 0;
 
-                    last_to_move = -1;
+                this.gameState.last_to_move = -1;
 
-                    // Dla jokera też możesz sprawdzić lidera (bez przesuwania karty)
-                    const old_leader = leader;
-                    const old_leader_position = leader_position;
+                // Dla jokera też możesz sprawdzić lidera (bez przesuwania karty)
+                const old_leader = this.gameState.leader;
+                const old_leader_position = this.gameState.leader_position;
 
-                    const new_leader_info = this.handleLeaderChange(
-                        old_leader,
-                        old_leader_position
-                    );
+                const new_leader_info = this.handleLeaderChange(
+                    old_leader,
+                    old_leader_position
+                );
 
-                    leader = new_leader_info.leader;
-                    leader_position = new_leader_info.position;
-                }
+                this.gameState.leader = new_leader_info.leader;
+                this.gameState.leader_position = new_leader_info.position;
+            }
 
-                this.updateBetStatusOverlay();
+            this.updateBetStatusOverlay();
+        }.bind(this);
 
-                for(let i = 0; i < 4; i++) {
-                    if (this.cardGrid.getCardAt(i, 6) != null) {
-                        timer.remove();
-                        this.endGame(leader);
-                        return;
-                    }
-                }
-            },
-            callbackScope: this,
-            loop: true
+        // Setup spacebar key for manual card drawing
+        this.input.keyboard.on('keydown-SPACE', () => {
+            this.drawNextCard();
+        });
+
+        // Create UI button for manual card drawing
+        this.createDrawButton();
+    }
+
+    createDrawButton() {
+        // Create button for drawing cards manually
+        const buttonX = this.sys.game.scale.width / 2; // Center horizontally
+        const buttonY = this.sys.game.scale.height - 80; // Near bottom
+        const buttonWidth = 200;
+        const buttonHeight = 50;
+        const buttonRadius = 15;
+
+        // Create container for the button
+        this.drawButtonContainer = this.add.container(buttonX, buttonY).setDepth(100);
+
+        // Button background
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(0x27ae60, 1); // Green color
+        buttonBg.fillRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
+        buttonBg.lineStyle(3, 0xffffff, 0.3);
+        buttonBg.strokeRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
+        this.drawButtonContainer.add(buttonBg);
+
+        // Button text
+        const buttonText = this.add.text(0, 0, "DRAW CARD", {
+            fontSize: '24px',
+            fontFamily: 'Arial',
+            color: "#ffffff",
+            fontStyle: "bold",
+            stroke: "#000000",
+            strokeThickness: 3
+        }).setOrigin(0.5);
+        this.drawButtonContainer.add(buttonText);
+
+        // Spacebar hint text
+        const hintText = this.add.text(0, 30, "(Press SPACEBAR)", {
+            fontSize: '12px',
+            fontFamily: 'Arial',
+            color: "#ffffff",
+            alpha: 0.8
+        }).setOrigin(0.5);
+        this.drawButtonContainer.add(hintText);
+
+        // Make button interactive
+        const hitArea = new Phaser.Geom.Rectangle(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight);
+        this.drawButtonContainer.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+
+        // Hover effects
+        this.drawButtonContainer.on('pointerover', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(0x2ecc71, 1); // Lighter green on hover
+            buttonBg.fillRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
+            buttonBg.lineStyle(3, 0xffffff, 0.5);
+            buttonBg.strokeRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
+            this.drawButtonContainer.setScale(1.05);
+        });
+
+        this.drawButtonContainer.on('pointerout', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(0x27ae60, 1); // Original green
+            buttonBg.fillRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
+            buttonBg.lineStyle(3, 0xffffff, 0.3);
+            buttonBg.strokeRoundedRect(-buttonWidth/2, -buttonHeight/2, buttonWidth, buttonHeight, buttonRadius);
+            this.drawButtonContainer.setScale(1.0);
+        });
+
+        // Click handler
+        this.drawButtonContainer.on('pointerdown', () => {
+            this.drawNextCard();
         });
     }
 
     endGame(winningTrack, jackpot=false) {
         console.log("Game ended");
+
+        // Clean up keyboard listeners
+        if (this.input && this.input.keyboard) {
+            this.input.keyboard.off('keydown-SPACE');
+        }
 
         this.session.finishRound(winningTrack);
         this.wallet = this.session.walletStatus;

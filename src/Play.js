@@ -366,10 +366,12 @@ export class Play extends Phaser.Scene {
 
                         // Check if we've reached 6 consecutive moves AND there's a bet on this row
                         if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
-                            this.triggerJackpot();
+                            timer.remove();
+                            this.endGame(leader, true);
                             // Reset the counter after triggering the jackpot
                             this.consecutiveMovesCount = 0;
                             this.lastMovedRow = -1;
+                            return;
                         }
 
                         last_to_move = -1;
@@ -461,10 +463,12 @@ export class Play extends Phaser.Scene {
 
                         // Check if we've reached 6 consecutive moves AND there's a bet on this row
                         if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
-                            this.triggerJackpot();
+                            timer.remove();
+                            this.endGame(leader, true);
                             // Reset the counter after triggering the jackpot
                             this.consecutiveMovesCount = 0;
                             this.lastMovedRow = -1;
+                            return;
                         }
 
                         last_to_move = suitIndex;
@@ -549,14 +553,16 @@ export class Play extends Phaser.Scene {
         });
     }
 
-    endGame(winningTrack) {
+    endGame(winningTrack, jackpot=false) {
         console.log("Game ended");
 
         this.session.finishRound(winningTrack);
         this.wallet = this.session.walletStatus;
 
         this.clearScreenWithAnimation().then(() => {
-            if(this.session.prevWonAmount > 0) {
+            if(jackpot) {
+                this.triggerJackpot();
+            } else if(this.session.prevWonAmount > 0) {
                 this.triggerEndWin(this.session.prevWonAmount);
             } else {
                 this.triggerLostEnd();
@@ -897,8 +903,6 @@ export class Play extends Phaser.Scene {
             }
         }
     }
-
-
 
     showJackpotPopup()
     {

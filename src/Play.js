@@ -171,6 +171,13 @@ export class Play extends Phaser.Scene {
                     if (!this.sound.get("theme-song")) {
                         this.sound.play("theme-song", { loop: true, volume: .5 });
                     }
+
+                    if (typeof helpContainer !== 'undefined' && helpContainer) {
+                        try { helpContainer.destroy(); } catch (e) {}
+                    }
+
+                    this.input.setDefaultCursor('default');
+
                     this.startGame();
                 }
             })

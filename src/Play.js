@@ -19,6 +19,10 @@ export class Play extends Phaser.Scene {
     walletText = null;
     walletIcon = null;
 
+    // Jackpot tracking variables
+    consecutiveMovesCount = 0;
+    lastMovedRow = -1;  // Track which row had the last move
+
     constructor() {
         super({
             key: 'Play'
@@ -37,12 +41,53 @@ export class Play extends Phaser.Scene {
         this.add.image(0, 0, "background").setOrigin(0);
 
         const titleText = this.add.text(this.sys.game.scale.width / 2, this.sys.game.scale.height / 2,
-            "Gra totalizatora sportowego\nNacisnij aby zaczac",
+            "Gra Card Racing\nNacisnij aby zaczac",
             { align: "center", strokeThickness: 4, fontSize: 40, fontStyle: "bold", color: "#8c7ae6" }
         )
             .setOrigin(.5)
             .setDepth(3)
             .setInteractive();
+
+        // Add registration text at the bottom with button-like background
+        const registrationY = this.sys.game.scale.height - 250; // Move it higher up to bottom
+        const registrationText = this.add.text(this.sys.game.scale.width / 2, registrationY,
+            "Kliknij aby się zarejestrować i zyskać darmowe 50 zł na start",
+            { align: "center", fontSize: 20, fontStyle: "normal", color: "#ffffff" } // White text
+        )
+            .setOrigin(.5)
+            .setDepth(4); // Higher depth to be above background
+
+        // Create rounded button background with dark color
+        const textWidth = registrationText.width + 30; // Add some padding
+        const textHeight = registrationText.height + 15; // Add some padding
+
+        const buttonBg = this.add.graphics()
+            .setDepth(3); // Behind the text
+
+        // Draw rounded rectangle
+        const x = this.sys.game.scale.width / 2 - textWidth / 2;
+        const y = registrationY - textHeight / 2;
+        const radius = 10; // Corner radius
+
+        buttonBg.fillStyle(0x2c3e50) // Dark blue-gray color
+            .fillRoundedRect(x, y, textWidth, textHeight, radius);
+
+        // Make button interactive
+        buttonBg.setInteractive({
+            hitArea: new Phaser.Geom.Rectangle(x, y, textWidth, textHeight),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+            useHandCursor: true
+        })
+            .on('pointerover', () => {
+                buttonBg.clear()
+                    .fillStyle(0x34495e) // Slightly lighter dark on hover
+                    .fillRoundedRect(x, y, textWidth, textHeight, radius);
+            })
+            .on('pointerout', () => {
+                buttonBg.clear()
+                    .fillStyle(0x2c3e50) // Original dark color
+                    .fillRoundedRect(x, y, textWidth, textHeight, radius);
+            });
 
         // title tween like retro arcade
         // this.add.tween({
@@ -219,6 +264,9 @@ export class Play extends Phaser.Scene {
         let leader = -1;
         let leader_position = -1;
 
+        // Create a container for highlight lines
+        this.highlightLinesContainer = this.add.container(0, 0);
+
         let timer = this.time.addEvent({
             delay: 1500,
             callback: async function () {
@@ -246,9 +294,33 @@ export class Play extends Phaser.Scene {
                     const cardData = {
                         type: sideCard.color + sideCard.value
                     }
+
+                    // Create highlight line for the column where the side card will be revealed
+                    this.createHighlightLine(last_column + 1);
+
                     this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value);
                     const suitIndex = suits.indexOf(sideCard.color);
                     this.cardGrid.moveCard(suitIndex, false, (card, row, newColumn) => {
+                        // Add jackpot logic for side cards: track consecutive moves
+                        if (this.lastMovedRow === suitIndex) {
+                            // Same row moved again - increment counter
+                            this.consecutiveMovesCount++;
+                        } else {
+                            // Different row - reset counter and start from 1
+                            this.consecutiveMovesCount = 1;
+                        }
+
+                        // Update the last moved row
+                        this.lastMovedRow = suitIndex;
+
+                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                            this.triggerJackpot();
+                            // Reset the counter after triggering the jackpot
+                            this.consecutiveMovesCount = 0;
+                            this.lastMovedRow = -1;
+                        }
+
                         last_to_move = -1;
 
                         const old_leader = leader;
@@ -270,6 +342,7 @@ export class Play extends Phaser.Scene {
                     last_column++;
                     last_to_move = -1;
 
+                    // The callback should have handled the jackpot logic, so we just continue with leader logic
                     const old_leader = leader;
                     const old_leader_position = leader_position;
 
@@ -323,6 +396,26 @@ export class Play extends Phaser.Scene {
                             }
                         }
 
+                        // Add jackpot logic: track consecutive moves
+                        if (this.lastMovedRow === suitIndex) {
+                            // Same row moved again - increment counter
+                            this.consecutiveMovesCount++;
+                        } else {
+                            // Different row - reset counter and start from 1
+                            this.consecutiveMovesCount = 1;
+                        }
+
+                        // Update the last moved row
+                        this.lastMovedRow = suitIndex;
+
+                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                            this.triggerJackpot();
+                            // Reset the counter after triggering the jackpot
+                            this.consecutiveMovesCount = 0;
+                            this.lastMovedRow = -1;
+                        }
+
                         last_to_move = suitIndex;
                         const old_leader = leader;
                         const old_leader_position = leader_position;
@@ -370,6 +463,10 @@ export class Play extends Phaser.Scene {
                             });
                         }
                     });
+
+                    // Joker breaks the consecutive move sequence
+                    this.lastMovedRow = -1;
+                    this.consecutiveMovesCount = 0;
 
                     last_to_move = -1;
 
@@ -452,6 +549,60 @@ export class Play extends Phaser.Scene {
                 this.cameras.main.fadeIn(300);
                 
                 resolve();
+            });
+        });
+    }
+    // Method to create a highlight line behind the column where side card is revealed
+    createHighlightLine(column) {
+        // Clean up any existing highlight lines
+        if (this.highlightLinesContainer) {
+            this.highlightLinesContainer.removeAll(true); // Remove all children and destroy them
+        }
+
+        // Get the position of the column where the side card is revealed
+        const { x, y } = this.cardGrid.gridPositions[0][column];
+
+        // Calculate the vertical bounds for the line
+        const startY = this.cardGrid.gridPositions[0][column].y - 50; // Start above the first card
+        const endY = this.cardGrid.gridPositions[3][column].y + 50; // Extend below the last card
+
+        // Calculate the position to the left of the column
+        const cardWidth = this.cardGrid.actualCardWidth || 150; // Default to 150 if not available
+        const lineX = x - (cardWidth / 2) - 20; // Position to the left of the card, with 20px offset
+
+        // Create a line graphics object
+        const lineGraphics = this.add.graphics();
+        lineGraphics.lineStyle(5, 0x80ffff, 0.50); // Thin white line with even lower opacity
+        lineGraphics.beginPath();
+        lineGraphics.moveTo(lineX, startY); // Start to the left of the column
+        lineGraphics.lineTo(lineX, endY); // Draw vertical line
+        lineGraphics.strokePath();
+
+        // Set the depth to be behind the cards
+        lineGraphics.setDepth(-1);
+
+        // Add the line to the container
+        this.highlightLinesContainer.add(lineGraphics);
+
+        // Add fade in animation
+        lineGraphics.setAlpha(0);
+        this.tweens.add({
+            targets: lineGraphics,
+            alpha: 0.25,
+            duration: 300,
+            ease: 'Power2'
+        });
+
+        // Schedule fade out after a delay
+        this.time.delayedCall(1500, () => {
+            this.tweens.add({
+                targets: lineGraphics,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    lineGraphics.destroy();
+                }
             });
         });
     }
@@ -651,10 +802,23 @@ export class Play extends Phaser.Scene {
 
     triggerJackpot()
     {
+        // Hide deck cards in top-left during jackpot
+        if (this.deckCards && Array.isArray(this.deckCards)) {
+            this.deckCards.forEach(card => {
+                if (card) {
+                    card.setVisible(false);
+                }
+            });
+        }
+
+        // Hide main card grid during jackpot
+        this.hideMainCardGrid();
+
         // Create video but make it invisible initially
         this.video = this.add.video(window.innerWidth / 2, window.innerHeight / 2, 'smok').setScale(1.3);
         this.video.setAlpha(0); // Initially invisible
         this.video.play();
+        this.video.setDepth(90); // Set depth above normal game elements but below deck cards and UI effects
 
         // Show JACKPOT popup first
         this.showJackpotPopup();
@@ -669,6 +833,21 @@ export class Play extends Phaser.Scene {
             });
         });
     }
+
+    hideMainCardGrid() {
+        if (this.cardGrid && this.cardGrid.cardGrid) {
+            for (let row = 0; row < this.cardGrid.config.rows; row++) {
+                for (let col = 0; col < this.cardGrid.config.columns; col++) {
+                    const card = this.cardGrid.cardGrid[row][col];
+                    if (card) {
+                        card.setVisible(false);
+                    }
+                }
+            }
+        }
+    }
+
+
 
     showJackpotPopup()
     {

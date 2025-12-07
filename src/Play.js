@@ -13,6 +13,7 @@ export class Play extends Phaser.Scene {
     bettingUI = null;
     session = null;
     wallet = 5000;
+    walletStart = 5000;
     walletDisplay = null;
     walletContainer = null;
     walletText = null;
@@ -44,7 +45,6 @@ export class Play extends Phaser.Scene {
             { align: "center", strokeThickness: 4, fontSize: 40, fontStyle: "bold", color: "#8c7ae6" }
         )
             .setOrigin(.5)
-
             .setDepth(3)
             .setInteractive();
 
@@ -129,6 +129,7 @@ export class Play extends Phaser.Scene {
 
     restartGame() {
         this.cameras.main.fadeOut(200 * this.cards.length);
+        this.startGame();
     }
 
     createInitialCards() {
@@ -272,6 +273,7 @@ export class Play extends Phaser.Scene {
                 for(let i = 0; i < 4; i++) {
                     if (this.cardGrid.getCardAt(i, 6) != null) {
                         timer.remove();
+                        this.endGame(leader);
                         return;
                     }
                 }
@@ -486,6 +488,7 @@ export class Play extends Phaser.Scene {
                 for(let i = 0; i < 4; i++) {
                     if (this.cardGrid.getCardAt(i, 6) != null) {
                         timer.remove();
+                        this.endGame(leader);
                         return;
                     }
                 }
@@ -495,6 +498,60 @@ export class Play extends Phaser.Scene {
         });
     }
 
+    endGame(winningTrack) {
+        console.log("Game ended");
+
+        this.session.finishRound(winningTrack);
+        this.wallet = this.session.walletStatus;
+
+        this.clearScreenWithAnimation().then(() => {
+            if(this.session.prevWonAmount > 0) {
+                this.triggerEndWin(this.session.prevWonAmount);
+            } else {
+                this.triggerLostEnd();
+            }
+        });
+    }
+
+    async clearScreenWithAnimation() {
+        return new Promise((resolve) => {
+            // 1. Fade out całego ekranu
+            this.cameras.main.fadeOut(500);
+            
+            // 2. Po zakończeniu fade out, wyczyść wszystko
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                // Zatrzymaj wszystkie animacje
+                this.tweens.killAll();
+                this.time.removeAllEvents();
+                
+                // Usuń wszystkie obiekty (oprócz kamery)
+                this.children.removeAll();
+                
+                // Zresetuj komponenty
+                if (this.bettingUI) {
+                    this.bettingUI.destroy();
+                    this.bettingUI = null;
+                }
+                
+                if (this.cardGrid) {
+                    this.cardGrid.destroy();
+                    this.cardGrid = null;
+                }
+                
+                // Reset zmiennych
+                this.cardPack = null;
+                this.cards = null;
+                this.deckCards = [];
+                this.betStatusTexts = [];
+                this.betStatusContainer = null;
+                
+                // Fade in
+                this.cameras.main.fadeIn(300);
+                
+                resolve();
+            });
+        });
+    }
     // Method to create a highlight line behind the column where side card is revealed
     createHighlightLine(column) {
         // Clean up any existing highlight lines
@@ -1068,7 +1125,7 @@ export class Play extends Phaser.Scene {
                 // Nowy lider - nadaj bonus jeśli jest na nim zakład
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                     bonusTriggered = true;
                 }
@@ -1076,7 +1133,7 @@ export class Play extends Phaser.Scene {
                 // Ten sam lider, ale awansował do lepszej pozycji - nadaj bonus
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                     bonusTriggered = true;
                 }
@@ -1131,14 +1188,14 @@ export class Play extends Phaser.Scene {
                 // Nowy lider - nadaj bonus jeśli jest na nim zakład
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                 }
             } else if (new_leader === old_leader && new_leader_position > old_leader_position) {
                 // Ten sam lider, ale awansował do lepszej pozycji - nadaj bonus
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                 }
             }
@@ -1169,7 +1226,7 @@ export class Play extends Phaser.Scene {
         const bonusText = this.add.text(
             card_x,
             card_y - 50,
-            `LIDER! +0.5`,
+            `LIDER! +0.25`,
             {
                 fontSize: '16px',
                 fontFamily: 'Arial',
@@ -1217,7 +1274,7 @@ export class Play extends Phaser.Scene {
         const bonusText = this.add.text(
             card_x,
             card_y - 50,
-            `COMBO! +0.5`,
+            `COMBO! +0.25`,
             {
                 fontSize: '16px',
                 fontFamily: 'Arial',
@@ -1394,5 +1451,369 @@ export class Play extends Phaser.Scene {
 
         // Dźwięk monet
         this.sound.play('coins', { volume: 0.3 });
+    }
+
+    triggerEndWin(winAmount)
+    {
+        this.add.image(0, 0, "background").setOrigin(0);
+
+        // Create a semi-transparent black overlay that fades in
+        const overlay = this.add.rectangle(
+            this.sys.game.scale.width / 2,
+            this.sys.game.scale.height / 2,
+            this.sys.game.scale.width,
+            this.sys.game.scale.height,
+            0x000000
+        ).setDepth(100).setAlpha(50);
+
+        // Fade in the overlay
+        this.tweens.add({
+            targets: overlay,
+            alpha: 0.3,
+            duration: 999,
+            ease: 'Power2'
+        });
+
+        const jackpotText = this.add.text(
+            this.sys.game.scale.width / 2,
+            -200, // Start above the screen
+            "WYGRANA!",
+            {
+                fontSize: '120px',
+                fontFamily: 'Arial Black, Arial, sans-serif',
+                color: '#ffffff',
+                stroke: '#FFD700',
+                strokeThickness: 8,
+                fontStyle: 'bold'
+            }
+        )
+        .setOrigin(0.5, 0.5)
+        .setDepth(101)
+        .setAlpha(0);
+
+        const formattedAmount = winAmount.toLocaleString('en-US');
+
+        // Fade in and move down the JACKPOT text
+        this.tweens.add({
+            targets: [jackpotText],
+            y: this.sys.game.scale.height / 2,
+            alpha: 1,
+            duration: 800,
+            ease: 'Bounce.easeOut',
+            onComplete: () => {
+                // Start confetti effect after the text appears
+                this.startConfettiEffect();
+
+                // Start the pulsing animation after fade in
+                this.tweens.add({
+                    targets: jackpotText,
+                    scaleX: 1.3,
+                    scaleY: 1.3,
+                    duration: 800,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+
+                // Add color changing effect
+                this.tweens.add({
+                    targets: jackpotText,
+                    tint: 0xFFFF00, // Yellow
+                    duration: 1000,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1,
+                    hold: 500,
+                    props: {
+                        tint: {
+                            value: 0xFFD700, // Gold
+                            duration: 500,
+                            ease: 'Sine.easeInOut'
+                        }
+                    }
+                });
+            }
+        });
+
+        // Add a glowing effect with particles or by creating multiple text layers
+        for (let i = 1; i <= 3; i++) {
+            const glowText = this.add.text(
+                this.sys.game.scale.width / 2,
+                -200, // Start above the screen
+                "WYGRANA!",
+                {
+                    fontSize: '120px',
+                    fontFamily: 'Arial Black, Arial, sans-serif',
+                    color: '#FFD700',
+                    stroke: '#FFA500',
+                    strokeThickness: 4,
+                    fontStyle: 'bold'
+                }
+            )
+            .setOrigin(0.5, 0.5)
+            .setDepth(100)
+            .setAlpha(0);
+
+            // Fade in and move down the glow text
+            this.tweens.add({
+                targets: glowText,
+                y: this.sys.game.scale.height / 2,
+                alpha: 0.7 - (i * 0.2),
+                duration: 800 + (i * 100), // Stagger the timing
+                ease: 'Bounce.easeOut',
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: glowText,
+                        scaleX: 1.4,
+                        scaleY: 1.4,
+                        alpha: 0.3,
+                        duration: 800,
+                        ease: 'Sine.easeInOut',
+                        yoyo: true,
+                        repeat: -1
+                    });
+                }
+            });
+        }
+
+        // Add glow effect for win amount text
+        for (let i = 1; i <= 2; i++) {
+            const amountGlowText = this.add.text(
+                this.sys.game.scale.width / 2,
+                -300,
+                `${formattedAmount}zł`,
+                {
+                    fontSize: '96px',
+                    fontFamily: 'Arial Black, Arial, sans-serif',
+                    color: '#fff700ff',
+                    stroke: '#ff9900ff',
+                    strokeThickness: 4,
+                    fontStyle: 'bold'
+                }
+            )
+            .setOrigin(0.5, 0.5)
+            .setDepth(100)
+            .setAlpha(0);
+
+            // Fade in and move down the amount glow text
+            this.tweens.add({
+                targets: amountGlowText,
+                y: this.sys.game.scale.height / 2 + 160,
+                alpha: 0.5 - (i * 0.15),
+                duration: 800 + (i * 150),
+                ease: 'Bounce.easeOut',
+                delay: 300, // Slight delay after "YOU WON!"
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: amountGlowText,
+                        scaleX: 1.3,
+                        scaleY: 1.3,
+                        alpha: 0.2,
+                        duration: 600,
+                        ease: 'Sine.easeInOut',
+                        yoyo: true,
+                        repeat: -1
+                    });
+                }
+            });
+
+            const buttonY = this.sys.game.scale.height / 2 + 260;
+            const nextGameButton = this.createEndScreenButton(
+                this.sys.game.scale.width / 2, buttonY, 220, 50, 0x27ae60, '▶ NASTĘPNA GRA',
+                () => {
+                    this.clearScreenWithAnimation().then(() => {
+                        this.add.image(0, 0, "background").setOrigin(0);
+                        this.startGame();
+                    });
+                }
+            );
+            this.add(nextGameButton.container);
+        }
+    }
+
+    triggerLostEnd() {
+        this.add.image(0, 0, "background").setOrigin(0);
+
+        const overlay = this.add.rectangle(
+            this.sys.game.scale.width / 2,
+            this.sys.game.scale.height / 2,
+            this.sys.game.scale.width,
+            this.sys.game.scale.height,
+            0x000000
+        ).setDepth(100).setAlpha(50);
+
+        // Fade in the overlay
+        this.tweens.add({
+            targets: overlay,
+            alpha: 0.3,
+            duration: 999,
+            ease: 'Power2'
+        });
+
+        const loseText = this.add.text(
+            this.sys.game.scale.width / 2,
+            -200, // Start above the screen
+            "SPRÓBUJ JESZCZE RAZ!",
+            {
+                fontSize: '80px',
+                fontFamily: 'Arial Black, Arial, sans-serif',
+                color: '#ff0000ff',
+                stroke: '#ffffffff',
+                strokeThickness: 8,
+                fontStyle: 'bold'
+            }
+        )
+        .setOrigin(0.5, 0.5)
+        .setDepth(101)
+        .setAlpha(0);
+
+        this.tweens.add({
+            targets: [loseText],
+            y: this.sys.game.scale.height / 2,
+            alpha: 1,
+            duration: 800,
+            ease: 'Bounce.easeOut',
+            onComplete: () => {
+            //Start the pulsing animation after fade in
+                this.tweens.add({
+                    targets: loseText,
+                    scaleX: 1.15,
+                    scaleY: 1.15,
+                    duration: 800,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+            }
+        });
+
+        const buttonY = this.sys.game.scale.height / 2 + 260;
+        const nextGameButton = this.createEndScreenButton(
+            this.sys.game.scale.width / 2, buttonY, 220, 50, 0x27ae60, '▶ NASTĘPNA GRA',
+            () => {
+                this.clearScreenWithAnimation().then(() => {
+                    this.add.image(0, 0, "background").setOrigin(0);
+                    this.startGame();
+                });
+            }
+        );
+        this.add(nextGameButton.container);
+    }
+
+    // Tworzenie przycisku dla ekranu końcowego
+    createEndScreenButton(x, y, width, height, color, text, onClick) {
+        const container = this.add.container(x, y);
+        
+        // Tło przycisku
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(color, 1);
+        buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+        
+        // Obramowanie
+        buttonBg.lineStyle(2, 0xffffff, 1);
+        buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+        
+        container.add(buttonBg);
+        
+        // Tekst przycisku
+        const buttonText = this.add.text(0, 0, text, {
+            fontSize: '18px',
+            fontFamily: 'Arial',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        container.add(buttonText);
+        
+        // Interaktywność
+        const hitArea = new Phaser.Geom.Rectangle(-width/2, -height/2, width, height);
+        container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+        
+        // Efekty hover
+        container.on('pointerover', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 0.8);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            this.tweens.add({
+                targets: container,
+                scale: 1.05,
+                duration: 100,
+                ease: 'Power2'
+            });
+            
+            this.input.setDefaultCursor('pointer');
+        });
+        
+        container.on('pointerout', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 1);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            this.tweens.add({
+                targets: container,
+                scale: 1,
+                duration: 100,
+                ease: 'Power2'
+            });
+            
+            this.input.setDefaultCursor('default');
+        });
+        
+        container.on('pointerdown', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 0.6);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            this.sound.play('click', { volume: 0.3 });
+        });
+        
+        container.on('pointerup', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 0.8);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            onClick();
+        });
+        
+        return {
+            container: container,
+            background: buttonBg,
+            text: buttonText
+        };
+    }
+
+    createFallingCoinsEffect(x, y, count = 10) {
+        for (let i = 0; i < count; i++) {
+            const coin = this.add.sprite(x + Phaser.Math.Between(-200, 200), y - 100, 'coin')
+                .setScale(0.05)
+                .setDepth(1000);
+            
+            const angle = Phaser.Math.Between(-30, 30);
+            const distance = Phaser.Math.Between(100, 200);
+            const duration = Phaser.Math.Between(800, 1200);
+            
+            this.tweens.add({
+                targets: coin,
+                x: coin.x + Math.cos(Phaser.Math.DegToRad(angle)) * distance,
+                y: coin.y + Math.sin(Phaser.Math.DegToRad(angle)) * distance + 200,
+                angle: 720,
+                alpha: 0,
+                scale: 0.02,
+                duration: duration,
+                ease: 'Power2',
+                delay: i * 50,
+                onComplete: () => coin.destroy()
+            });
+        }
     }
 }

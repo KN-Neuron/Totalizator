@@ -255,8 +255,8 @@ export class Play extends Phaser.Scene {
         this.cardPack = new CardPack(
             ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"],
             ["diamonds", "hearts", "clubs", "spades"],
-            4 // DEBUG
-            //1
+            //4 // DEBUG
+            1
         );
 
         this.cards = this.cardGrid.createGrid();

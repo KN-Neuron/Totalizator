@@ -48,6 +48,47 @@ export class Play extends Phaser.Scene {
             .setDepth(3)
             .setInteractive();
 
+        // Add registration text at the bottom with button-like background
+        const registrationY = this.sys.game.scale.height - 250; // Move it higher up to bottom
+        const registrationText = this.add.text(this.sys.game.scale.width / 2, registrationY,
+            "Kliknij aby się zarejestrować i zyskać darmowe 50 zł na start",
+            { align: "center", fontSize: 20, fontStyle: "normal", color: "#ffffff" } // White text
+        )
+            .setOrigin(.5)
+            .setDepth(4); // Higher depth to be above background
+
+        // Create rounded button background with dark color
+        const textWidth = registrationText.width + 30; // Add some padding
+        const textHeight = registrationText.height + 15; // Add some padding
+
+        const buttonBg = this.add.graphics()
+            .setDepth(3); // Behind the text
+
+        // Draw rounded rectangle
+        const x = this.sys.game.scale.width / 2 - textWidth / 2;
+        const y = registrationY - textHeight / 2;
+        const radius = 10; // Corner radius
+
+        buttonBg.fillStyle(0x2c3e50) // Dark blue-gray color
+            .fillRoundedRect(x, y, textWidth, textHeight, radius);
+
+        // Make button interactive
+        buttonBg.setInteractive({
+            hitArea: new Phaser.Geom.Rectangle(x, y, textWidth, textHeight),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+            useHandCursor: true
+        })
+            .on('pointerover', () => {
+                buttonBg.clear()
+                    .fillStyle(0x34495e) // Slightly lighter dark on hover
+                    .fillRoundedRect(x, y, textWidth, textHeight, radius);
+            })
+            .on('pointerout', () => {
+                buttonBg.clear()
+                    .fillStyle(0x2c3e50) // Original dark color
+                    .fillRoundedRect(x, y, textWidth, textHeight, radius);
+            });
+
         // title tween like retro arcade
         // this.add.tween({
         //

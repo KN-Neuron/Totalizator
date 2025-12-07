@@ -103,7 +103,7 @@ export class cardGridManager {
         return card;
     }
 
-    moveCard(row, forward = true) {
+    moveCard(row, forward = true, onMoveComplete = null) {
         if(row < 0 || row > this.config.rows) {
             return false;
         }
@@ -146,6 +146,10 @@ export class cardGridManager {
 
                 if (card.cardData.onMove) {
                     card.cardData.onMove(card, newColumn, forward);
+                }
+                
+                if (onMoveComplete) {
+                    onMoveComplete(card, row, newColumn);
                 }
             }
         });

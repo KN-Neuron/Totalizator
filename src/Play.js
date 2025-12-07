@@ -161,17 +161,17 @@ export class Play extends Phaser.Scene {
     createBetStatusOverlay() {
         this.betStatusTexts = [];
         this.betStatusContainer = this.add.container(0, 0);
-        
+
         const suitColors = ['#e74c3c', '#2ecc71', '#e74c3c', '#2ecc71'];
-        
+
         for (let row = 0; row < 4; row++) {
             if(this.session.getPredictedWinnings(row).toFixed(2) < 0.01) continue;
 
             const gridPos = this.cardGrid.gridPositions;
             if (!gridPos || !gridPos[row] || !gridPos[row][0]) continue;
-            
+
             const { x, y } = gridPos[row][0];
-            
+
             const statusText = this.add.text(
                 x - 160,
                 y -40,
@@ -187,24 +187,24 @@ export class Play extends Phaser.Scene {
                     padding: { x: 8, y: 4 }
                 }
             ).setOrigin(0, 0);
-            
+
             this.betStatusContainer.add(statusText);
             this.betStatusTexts[row] = statusText;
         }
     }
 
-    updateBetStatusOverlay() {        
+    updateBetStatusOverlay() {
         for (let row = 0; row < 4; row++) {
             const track = row;
-            
+
             if (!this.betStatusTexts[row]) continue;
-            
+
             const multiplier = this.session.trackMultipliers[track].toFixed(2);
             const betAmount = this.session.currentUserBets[track];
-            
+
             if (betAmount > 0) {
                 const predictedWin = this.session.getPredictedWinnings(row).toFixed(2);
-                
+
                 this.betStatusTexts[row].setText(
                     `${predictedWin} zł\n×${multiplier}`
                 );
@@ -219,7 +219,7 @@ export class Play extends Phaser.Scene {
         let leader_position = -1;
 
         let timer = this.time.addEvent({
-            delay: 2000,
+            delay: 1500,
             callback: async function () {
                 for(let i = 0; i < 4; i++) {
                     if (this.cardGrid.getCardAt(i, 6) != null) {
@@ -238,33 +238,51 @@ export class Play extends Phaser.Scene {
                         }
                     }
                 }
-                
+
                 if (counter == (1+last_column)*4) {
                     let sideCard = this.cardPack.initialSideCards[last_column];
                     const cardData = {
                         type: sideCard.color + sideCard.value
                     }
                     this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value);
-                    this.cardGrid.moveCard(suits.indexOf(sideCard.color), false);
+                    const suitIndex = suits.indexOf(sideCard.color);
+                    this.cardGrid.moveCard(suitIndex, false, (card, row, newColumn) => {
+                        last_to_move = -1;
+
+                        const old_leader = leader;
+                        const old_leader_position = leader_position;
+
+                        // UŻYJ NOWEJ METODY
+                        const moved_row = suitIndex;
+                        const new_leader_info = this.handleLeaderChange(
+                            old_leader,
+                            old_leader_position,
+                            moved_row
+                        );
+
+                        // Zaktualizuj zmienne
+                        leader = new_leader_info.leader;
+                        leader_position = new_leader_info.position;
+                    });
 
                     last_column++;
                     last_to_move = -1;
 
                     const old_leader = leader;
                     const old_leader_position = leader_position;
-                    
+
                     // UŻYJ NOWEJ METODY
                     const moved_row = suits.indexOf(sideCard.color);
                     const new_leader_info = this.handleLeaderChange(
-                        old_leader, 
-                        old_leader_position, 
+                        old_leader,
+                        old_leader_position,
                         moved_row
                     );
-                    
+
                     // Zaktualizuj zmienne
                     leader = new_leader_info.leader;
                     leader_position = new_leader_info.position;
-                    
+
                     return;
                 }
 
@@ -273,7 +291,7 @@ export class Play extends Phaser.Scene {
 
                 if (pulled_card.color != "JOKER") {
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
-                    
+
                     this.tweens.add({
                         targets: card,
                         scaleX: 0,
@@ -290,36 +308,51 @@ export class Play extends Phaser.Scene {
                         }
                     });
 
-                    this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
-
-                    if(last_to_move == suits.indexOf(pulled_card.color)) {
-                        this.session.updateMultiplier(
-                            suits.indexOf(pulled_card.color), 
-                            this.session.trackMultipliers[suits.indexOf(pulled_card.color)] + 0.5
-                        );
-                        if(this.session.currentUserBets[suits.indexOf(pulled_card.color)] > 0) {
-                            this.showComboBonus(suits.indexOf(pulled_card.color));
+                    // Store the suit index for use in the callback
+                    const suitIndex = suits.indexOf(pulled_card.color);
+                    this.cardGrid.moveCard(suitIndex, true, (card, row, newColumn) => {
+                        if(last_to_move == suitIndex) {
+                            this.session.updateMultiplier(
+                                suitIndex,
+                                this.session.trackMultipliers[suitIndex] + 0.5
+                            );
+                            if(this.session.currentUserBets[suitIndex] > 0) {
+                                this.showComboBonus(suitIndex);
+                            }
                         }
-                    }
 
-                    last_to_move = suits.indexOf(pulled_card.color);
+                        last_to_move = suitIndex;
+                        const old_leader = leader;
+                        const old_leader_position = leader_position;
+
+                        const moved_row = suitIndex;
+                        const new_leader_info = this.handleLeaderChange(
+                            old_leader,
+                            old_leader_position,
+                            moved_row
+                        );
+
+                        leader = new_leader_info.leader;
+                        leader_position = new_leader_info.position;
+                    });
+
                     const old_leader = leader;
                     const old_leader_position = leader_position;
 
                     const moved_row = suits.indexOf(pulled_card.color);
                     const new_leader_info = this.handleLeaderChange(
-                        old_leader, 
-                        old_leader_position, 
+                        old_leader,
+                        old_leader_position,
                         moved_row
                     );
-                    
+
                     leader = new_leader_info.leader;
                     leader_position = new_leader_info.position;
-                    
+
                 } else {
                     // Joker - TUTAJ TEŻ MOŻESZ UŻYĆ TEJ METODY
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
-                    
+
                     this.tweens.add({
                         targets: card,
                         scaleX: 0,
@@ -337,20 +370,20 @@ export class Play extends Phaser.Scene {
                     });
 
                     last_to_move = -1;
-                    
+
                     // Dla jokera też możesz sprawdzić lidera (bez przesuwania karty)
                     const old_leader = leader;
                     const old_leader_position = leader_position;
-                    
-                    const new_leader_info = await this.handleLeaderChange(
-                        old_leader, 
+
+                    const new_leader_info = this.handleLeaderChange(
+                        old_leader,
                         old_leader_position
                     );
-                    
+
                     leader = new_leader_info.leader;
                     leader_position = new_leader_info.position;
                 }
-                
+
                 this.updateBetStatusOverlay();
 
                 for(let i = 0; i < 4; i++) {
@@ -846,18 +879,30 @@ export class Play extends Phaser.Scene {
         const new_leader_info = this.getCurrentLeader();
         const new_leader = new_leader_info.leader;
         const new_leader_position = new_leader_info.position;
-        
+
+        let bonusTriggered = false;
+
         // Sprawdź czy doszło do zmiany lidera
-        if (new_leader !== -1 && new_leader !== old_leader) {
-            if (old_leader === -1 || new_leader_position > old_leader_position) {
-                // Sprawdź czy na nowym liderze są pieniądze
+        if (new_leader !== -1) {
+            if (new_leader !== old_leader) {
+                // Nowy lider - nadaj bonus jeśli jest na nim zakład
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
                     this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
                     this.showLeaderBonus(new_leader);
+                    bonusTriggered = true;
+                }
+            } else if (new_leader === old_leader && new_leader_position > old_leader_position) {
+                // Ten sam lider, ale awansował do lepszej pozycji - nadaj bonus
+                if (this.session.currentUserBets[new_leader] > 0) {
+                    const current_multiplier = this.session.trackMultipliers[new_leader];
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.showLeaderBonus(new_leader);
+                    bonusTriggered = true;
                 }
             }
         }
+
         // Zwróć nowe wartości lidera
         return { leader: new_leader, position: new_leader_position };
     }
@@ -866,7 +911,7 @@ export class Play extends Phaser.Scene {
         let leader = -1;
         let max_position = -1;
         let is_tie = false;
-        
+
         for (let row = 0; row < 4; row++) {
             // Znajdź najdalszą kartę w rzędzie
             let current_position = -1;
@@ -875,7 +920,7 @@ export class Play extends Phaser.Scene {
                     current_position = col;
                 }
             }
-            
+
             if (current_position > max_position) {
                 // Nowy lider
                 max_position = current_position;
@@ -886,12 +931,12 @@ export class Play extends Phaser.Scene {
                 is_tie = true;
             }
         }
-        
+
         // Jeśli jest remis, nikt nie jest liderem
         if (is_tie) {
             return { leader: -1, position: max_position };
         }
-        
+
         return { leader: leader, position: max_position };
     }
 
@@ -900,26 +945,25 @@ export class Play extends Phaser.Scene {
         const new_leader_info = this.getCurrentLeader();
         const new_leader = new_leader_info.leader;
         const new_leader_position = new_leader_info.position;
-        
-        if (new_leader !== -1 && new_leader !== old_leader) {
-            // Sprawdź czy na nowym liderze SĄ PIENIĄDZE
-            if (this.session.currentUserBets[new_leader] > 0) {
-                if (old_leader === -1) {
-                    // Dodaj bonus
+
+        if (new_leader !== -1) {
+            if (new_leader !== old_leader) {
+                // Nowy lider - nadaj bonus jeśli jest na nim zakład
+                if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
                     this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
-                    
                     this.showLeaderBonus(new_leader);
-                } else if (new_leader_position > old_leader_position) {
-                    // Dodaj bonus
+                }
+            } else if (new_leader === old_leader && new_leader_position > old_leader_position) {
+                // Ten sam lider, ale awansował do lepszej pozycji - nadaj bonus
+                if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
                     this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
-                    
                     this.showLeaderBonus(new_leader);
                 }
             }
         }
-        
+
         // Zwróć nowe wartości lidera
         return { leader: new_leader, position: new_leader_position };
     }
@@ -929,7 +973,7 @@ export class Play extends Phaser.Scene {
         // Znajdź pozycję karty lidera
         let card_x = 0;
         let card_y = 0;
-        
+
         for (let col = 6; col >= 0; col--) {
             const card = this.cardGrid.getCardAt(row, col);
             if (card) {
@@ -938,9 +982,9 @@ export class Play extends Phaser.Scene {
                 break;
             }
         }
-        
+
         if (card_x === 0 && card_y === 0) return;
-        
+
         // Stwórz tekst bonusu
         const bonusText = this.add.text(
             card_x,
@@ -955,7 +999,7 @@ export class Play extends Phaser.Scene {
                 fontStyle: 'bold'
             }
         ).setOrigin(0.5);
-        
+
         // Animacja
         this.tweens.add({
             targets: bonusText,
@@ -965,10 +1009,10 @@ export class Play extends Phaser.Scene {
             ease: 'Power2',
             onComplete: () => bonusText.destroy()
         });
-        
+
         // Dodaj efekt iskier
         this.createSparkleEffect(card_x, card_y - 30);
-        
+
         // Dźwięk
         //this.sound.play('bonus', { volume: 0.3 });
     }
@@ -977,7 +1021,7 @@ export class Play extends Phaser.Scene {
     showComboBonus(row) {
         let card_x = 0;
         let card_y = 0;
-        
+
         for (let col = 6; col >= 0; col--) {
             const card = this.cardGrid.getCardAt(row, col);
             if (card) {
@@ -986,9 +1030,9 @@ export class Play extends Phaser.Scene {
                 break;
             }
         }
-        
+
         if (card_x === 0 && card_y === 0) return;
-        
+
         // Stwórz tekst bonusu
         const bonusText = this.add.text(
             card_x,
@@ -1003,7 +1047,7 @@ export class Play extends Phaser.Scene {
                 fontStyle: 'bold'
             }
         ).setOrigin(0.5);
-        
+
         // Animacja
         this.tweens.add({
             targets: bonusText,
@@ -1013,10 +1057,10 @@ export class Play extends Phaser.Scene {
             ease: 'Power2',
             onComplete: () => bonusText.destroy()
         });
-        
+
         // Dodaj efekt iskier
         this.createSparkleEffect(card_x, card_y - 30);
-        
+
         // Dźwięk
         //this.sound.play('bonus', { volume: 0.3 });
     }
@@ -1025,10 +1069,10 @@ export class Play extends Phaser.Scene {
     createSparkleEffect(x, y) {
         for (let i = 0; i < 8; i++) {
             const sparkle = this.add.circle(x, y, 3, 0xf1c40f);
-            
+
             const angle = (i / 8) * Math.PI * 2;
             const distance = 30 + Math.random() * 20;
-            
+
             this.tweens.add({
                 targets: sparkle,
                 x: x + Math.cos(angle) * distance,
@@ -1044,33 +1088,33 @@ export class Play extends Phaser.Scene {
 
     createWalletDisplay() {
         const { width, height } = this.sys.game.scale;
-        
+
         // Kontener
         this.walletContainer = this.add.container(width - 20, 20);
-        
+
         // Tło z zaokrąglonymi rogami i cieniem
         const background = this.add.graphics();
         background.fillStyle(0x1a1a2e, 0.95);
         background.fillRoundedRect(-160, -25, 160, 50, 15);
-        
+
         // Obramowanie z gradientem
         background.lineStyle(3, 0x8c7ae6, 1);
         background.strokeRoundedRect(-160, -25, 160, 50, 15);
-        
+
         // Cień
         const shadow = this.add.graphics();
         shadow.fillStyle(0x000000, 0.3);
         shadow.fillRoundedRect(-158, -23, 156, 46, 13);
         shadow.setDepth(-1);
-        
+
         this.walletContainer.add(shadow);
         this.walletContainer.add(background);
-        
+
         // Ikona portfela/żetona
         this.walletIcon = this.add.sprite(-130, 0, 'coin')
             .setScale(0.08)
             .setOrigin(0.5);
-        
+
         // Animacja obracania się ikony
         this.tweens.add({
             targets: this.walletIcon,
@@ -1079,7 +1123,7 @@ export class Play extends Phaser.Scene {
             repeat: -1,
             ease: 'Linear'
         });
-        
+
         // Tekst portfela
         this.walletText = this.add.text(-80, 0, `${this.session.walletStatus} zł`, {
             fontSize: '22px',
@@ -1097,7 +1141,7 @@ export class Play extends Phaser.Scene {
                 fill: true
             }
         }).setOrigin(0, 0.5);
-        
+
         // Dodaj wszystkie elementy do kontenera
         this.walletContainer.add(this.walletIcon);
         this.walletContainer.add(this.walletText);
@@ -1107,15 +1151,15 @@ export class Play extends Phaser.Scene {
         if (this.walletText && this.session) {
             const currentAmount = this.session.walletStatus;
             const oldAmount = parseInt(this.walletText.text.replace(' zł', '')) || currentAmount;
-            
+
             // Animacja zmiany wartości
             if (oldAmount !== currentAmount) {
                 // Zmiana koloru w zależności od zmiany
-                const color = currentAmount > oldAmount ? '#2ecc71' : 
+                const color = currentAmount > oldAmount ? '#2ecc71' :
                             currentAmount < oldAmount ? '#e74c3c' : '#ffffff';
-                
+
                 this.walletText.setColor(color);
-                
+
                 // Animacja tekstu
                 this.tweens.add({
                     targets: this.walletText,
@@ -1124,16 +1168,16 @@ export class Play extends Phaser.Scene {
                     yoyo: true,
                     ease: 'Power2'
                 });
-                
+
                 // Efekt monet przy wygranej
                 if (currentAmount > oldAmount) {
                     this.createCoinEffect();
                 }
             }
-            
+
             // Aktualizuj tekst
             this.walletText.setText(`${currentAmount} zł`);
-            
+
             // Przywróć kolor po chwili
             this.time.delayedCall(1000, () => {
                 if (this.walletText) {
@@ -1145,16 +1189,16 @@ export class Play extends Phaser.Scene {
 
     createCoinEffect() {
         const { x, y } = this.walletContainer;
-        
+
         // Efekt wylatujących monet
         for (let i = 0; i < 5; i++) {
             const coin = this.add.sprite(x, y, 'coin')
                 .setScale(0.04)
                 .setDepth(100);
-            
+
             const angle = Phaser.Math.Between(-30, 30);
             const distance = Phaser.Math.Between(50, 100);
-            
+
             this.tweens.add({
                 targets: coin,
                 x: x + Math.cos(Phaser.Math.DegToRad(angle)) * distance,
@@ -1167,7 +1211,7 @@ export class Play extends Phaser.Scene {
                 onComplete: () => coin.destroy()
             });
         }
-        
+
         // Dźwięk monet
         this.sound.play('coins', { volume: 0.3 });
     }

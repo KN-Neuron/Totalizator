@@ -361,7 +361,7 @@ export class Play extends Phaser.Scene {
                             betOnCards.push(suits[i]);
                         }
                     }
-                    console.log(betOnCards); // DEBUG
+                    //console.log(betOnCards); // DEBUG
                     let getOut = false;
                     let leaderSuit = null;
                     for (let i = 6; i >= 0; i--) {
@@ -382,36 +382,33 @@ export class Play extends Phaser.Scene {
                             getOut = true;
                             if (!betOnCards.includes(sureSuit)) {
                                 leaderSuit = sureSuit;
-                                jokerGameState = 3;
+                                jokerGameState = 2;
                             }
                         }
                         if (getOut) {
                             break;
                         }
                     }
-                    console.log(betOnCards);
+                    //console.log(betOnCards);
 
                     let jokerFunction = Math.floor(Math.random() * jokerGameState);
 
-                    console.log("jokerGameState: ", jokerGameState);
-                    //jokerFunction = 2; // DEBUG
+                    //console.log("jokerGameState: ", jokerGameState);
+                    //jokerFunction = 0; // DEBUG
                     switch (jokerFunction) {
                         case 0: // MULTIPLIER BOOST
-                            console.log("JOKER 0") // jokery
-                            const new_leader_info = this.getCurrentLeader();
-                            const new_leader = new_leader_info.leader;
-                            
-                            // TODO: dodaj bonus na koncu / pokaz gdzies? idk
-                            //this.session.updateMultiplier(new_leader, current_multiplier * 1.5);
-                            //this.showLeaderBonus(new_leader);
-                            // TODO: jakis efekt wow animacja mega bonusu prosto od smoka
-                        case 1: // ZAMIANA KART
-                            // Wlozenie kart twojego koloru znowu do talii
-                        case 2:
-                            console.log("MOVE");
-                            console.log(leaderSuit);
+                            for (let betOnSuit of betOnCards) {
+                                let indexOfBet = suits.indexOf(betOnSuit);
+                                const current_multiplier = this.session.trackMultipliers[indexOfBet];
+                                this.session.updateMultiplier(indexOfBet, current_multiplier * 1.5);
+                                this.showLeaderBonus(indexOfBet);
+                                //TODO: jakis efekt wow animacja mega bonusu prosto od smoka
+                            }
+                            break;
+                        case 1:
                             const suitIndex = suits.indexOf(leaderSuit);
                             this.cardGrid.moveCard(suitIndex, false)
+                            break;
                     }
 
 

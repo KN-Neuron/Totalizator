@@ -297,14 +297,15 @@ export class Play extends Phaser.Scene {
                             suits.indexOf(pulled_card.color), 
                             this.session.trackMultipliers[suits.indexOf(pulled_card.color)] + 0.5
                         );
-                        this.showComboBonus(suits.indexOf(pulled_card.color));
+                        if(this.session.currentUserBets[suits.indexOf(pulled_card.color)] > 0) {
+                            this.showComboBonus(suits.indexOf(pulled_card.color));
+                        }
                     }
 
                     last_to_move = suits.indexOf(pulled_card.color);
                     const old_leader = leader;
                     const old_leader_position = leader_position;
 
-                    // UŻYJ NOWEJ METODY
                     const moved_row = suits.indexOf(pulled_card.color);
                     const new_leader_info = this.handleLeaderChange(
                         old_leader, 
@@ -341,11 +342,9 @@ export class Play extends Phaser.Scene {
                     const old_leader = leader;
                     const old_leader_position = leader_position;
                     
-                    // Joker nie przesuwa karty, więc nie podajemy moved_row
                     const new_leader_info = await this.handleLeaderChange(
                         old_leader, 
                         old_leader_position
-                        // Brak moved_row - nie czekamy na animację
                     );
                     
                     leader = new_leader_info.leader;

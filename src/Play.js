@@ -150,17 +150,78 @@ export class Play extends Phaser.Scene {
         this.bettingUI.create();
 
         this.events.on('betConfirmed', this.handleBetConfirmed, this);
+
+        this.events.on('betChanged', this.handleBetChanged, this);
+    }
+
+    handleBetChanged() {
+        
+    }
+
+    createBetStatusOverlay() {
+        this.betStatusTexts = [];
+        this.betStatusContainer = this.add.container(0, 0);
+        
+        const suitColors = ['#e74c3c', '#2ecc71', '#e74c3c', '#2ecc71'];
+        
+        for (let row = 0; row < 4; row++) {
+            if(this.session.getPredictedWinnings(row).toFixed(2) < 0.01) continue;
+
+            const gridPos = this.cardGrid.gridPositions;
+            if (!gridPos || !gridPos[row] || !gridPos[row][0]) continue;
+            
+            const { x, y } = gridPos[row][0];
+            
+            const statusText = this.add.text(
+                x - 160,
+                y -40,
+                `${this.session.getPredictedWinnings(row).toFixed(2)} zł\n×${this.session.trackMultipliers[row].toFixed(2)}`,
+                {
+                    fontSize: '14px',
+                    fontFamily: 'Arial',
+                    color: suitColors[row],
+                    align: 'center',
+                    stroke: '#000000',
+                    strokeThickness: 2,
+                    backgroundColor: '#1a1a2e',
+                    padding: { x: 8, y: 4 }
+                }
+            ).setOrigin(0, 0);
+            
+            this.betStatusContainer.add(statusText);
+            this.betStatusTexts[row] = statusText;
+        }
+    }
+
+    updateBetStatusOverlay() {        
+        for (let row = 0; row < 4; row++) {
+            const track = row;
+            
+            if (!this.betStatusTexts[row]) continue;
+            
+            const multiplier = this.session.trackMultipliers[track].toFixed(2);
+            const betAmount = this.session.currentUserBets[track];
+            
+            if (betAmount > 0) {
+                const predictedWin = this.session.getPredictedWinnings(row).toFixed(2);
+                
+                this.betStatusTexts[row].setText(
+                    `${predictedWin} zł\n×${multiplier}`
+                );
+            }
+        }
     }
 
     startGameTimer() {
         let last_column = 0;
+        let last_to_move = -1;
+        let leader = -1;
+        let leader_position = -1;
+
         let timer = this.time.addEvent({
             delay: 2000,
-            callback: function ()
-            {
-                // sprawdzanie konca gry bo musi byc na poczatku
+            callback: async function () {
                 for(let i = 0; i < 4; i++) {
-                    console.log(this.cardGrid.getCardAt(i, 6));
                     if (this.cardGrid.getCardAt(i, 6) != null) {
                         timer.remove();
                         return;
@@ -168,7 +229,7 @@ export class Play extends Phaser.Scene {
                 }
 
                 let suits = ["diamonds", "clubs", "hearts", "spades"];
-                // sprawdzanie czy jest jakis row zwolniony
+
                 let counter = 0;
                 for (let j = 0; j <= last_column; j++) {
                     for(let i = 0; i < 4; i++) {
@@ -177,37 +238,49 @@ export class Play extends Phaser.Scene {
                         }
                     }
                 }
+                
                 if (counter == (1+last_column)*4) {
                     let sideCard = this.cardPack.initialSideCards[last_column];
                     const cardData = {
                         type: sideCard.color + sideCard.value
                     }
-                    //this.cardGrid.createCard(4, last_column+1, cardData);
-                    this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value)
+                    this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value);
+                    this.cardGrid.moveCard(suits.indexOf(sideCard.color), false);
 
                     last_column++;
-                    this.cardGrid.moveCard(suits.indexOf(sideCard.color), false);
+                    last_to_move = -1;
+
+                    const old_leader = leader;
+                    const old_leader_position = leader_position;
+                    
+                    // UŻYJ NOWEJ METODY
+                    const moved_row = suits.indexOf(sideCard.color);
+                    const new_leader_info = this.handleLeaderChange(
+                        old_leader, 
+                        old_leader_position, 
+                        moved_row
+                    );
+                    
+                    // Zaktualizuj zmienne
+                    leader = new_leader_info.leader;
+                    leader_position = new_leader_info.position;
+                    
                     return;
                 }
-
 
                 // losowanie karty z decku
                 let pulled_card = this.cardPack.getNext();
 
                 if (pulled_card.color != "JOKER") {
-                    // Create card with initial back texture for flip animation
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
                     
-                    // Create flip animation
                     this.tweens.add({
                         targets: card,
                         scaleX: 0,
                         duration: 200,
                         ease: 'Power2',
                         onComplete: () => {
-                            // Change the texture when the card is flipped
                             card.setTexture('cards', pulled_card.color + pulled_card.value);
-                            // Then flip the card back to normal
                             this.tweens.add({
                                 targets: card,
                                 scaleX: 0.75,
@@ -216,22 +289,43 @@ export class Play extends Phaser.Scene {
                             });
                         }
                     });
-                    
+
                     this.cardGrid.moveCard(suits.indexOf(pulled_card.color));
+
+                    if(last_to_move == suits.indexOf(pulled_card.color)) {
+                        this.session.updateMultiplier(
+                            suits.indexOf(pulled_card.color), 
+                            this.session.trackMultipliers[suits.indexOf(pulled_card.color)] + 0.5
+                        );
+                        this.showComboBonus(suits.indexOf(pulled_card.color));
+                    }
+
+                    last_to_move = suits.indexOf(pulled_card.color);
+                    const old_leader = leader;
+                    const old_leader_position = leader_position;
+
+                    // UŻYJ NOWEJ METODY
+                    const moved_row = suits.indexOf(pulled_card.color);
+                    const new_leader_info = this.handleLeaderChange(
+                        old_leader, 
+                        old_leader_position, 
+                        moved_row
+                    );
+                    
+                    leader = new_leader_info.leader;
+                    leader_position = new_leader_info.position;
+                    
                 } else {
-                    // Create joker card with flip animation
+                    // Joker - TUTAJ TEŻ MOŻESZ UŻYĆ TEJ METODY
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
                     
-                    // Create flip animation for joker
                     this.tweens.add({
                         targets: card,
                         scaleX: 0,
                         duration: 200,
                         ease: 'Power2',
                         onComplete: () => {
-                            // Change the texture when the card is flipped
                             card.setTexture('cards', "joker");
-                            // Then flip the card back to normal
                             this.tweens.add({
                                 targets: card,
                                 scaleX: 0.75,
@@ -240,11 +334,26 @@ export class Play extends Phaser.Scene {
                             });
                         }
                     });
-                    
-                    // TODO: mechanika jokerow
-                }
 
-                // sprawdzanie konca gry drugi raz bo nie bedzie timer delaya
+                    last_to_move = -1;
+                    
+                    // Dla jokera też możesz sprawdzić lidera (bez przesuwania karty)
+                    const old_leader = leader;
+                    const old_leader_position = leader_position;
+                    
+                    // Joker nie przesuwa karty, więc nie podajemy moved_row
+                    const new_leader_info = await this.handleLeaderChange(
+                        old_leader, 
+                        old_leader_position
+                        // Brak moved_row - nie czekamy na animację
+                    );
+                    
+                    leader = new_leader_info.leader;
+                    leader_position = new_leader_info.position;
+                }
+                
+                this.updateBetStatusOverlay();
+
                 for(let i = 0; i < 4; i++) {
                     if (this.cardGrid.getCardAt(i, 6) != null) {
                         timer.remove();
@@ -259,22 +368,24 @@ export class Play extends Phaser.Scene {
 
     handleBetConfirmed(bets) {
         if(bets['diamonds'] > 0) {
-            this.session.placeBet(0, bets[0]);
+            this.session.placeBet(0, bets['diamonds']);
         }
         if(bets['hearts'] > 0) {
-            this.session.placeBet(1, bets[2]);
+            this.session.placeBet(2, bets['hearts']);
+            console.log(bets['hearts']);
         }
         if(bets['clubs'] > 0) {
-            this.session.placeBet(2, bets[1]);
+            this.session.placeBet(1, bets['clubs']);
         }
         if(bets['spades'] > 0) {
-            this.session.placeBet(3, bets[3]);
+            this.session.placeBet(3, bets['spades']);
         }
         this.bettingUI.hide();
+        this.session.startRound();
         this.dealInitialCards().then(() => {
+            this.createBetStatusOverlay();
             this.startGameTimer();
         });
-        this.session.startRound();
     }
 
     dealCardFromDeck(row, col, cardData) {
@@ -730,4 +841,204 @@ export class Play extends Phaser.Scene {
         });
     }
 
+    handleLeaderChange(old_leader, old_leader_position, moved_row) {
+        // Sprawdź aktualnego lidera
+        const new_leader_info = this.getCurrentLeader();
+        const new_leader = new_leader_info.leader;
+        const new_leader_position = new_leader_info.position;
+        
+        // Sprawdź czy doszło do zmiany lidera
+        if (new_leader !== -1 && new_leader !== old_leader) {
+            if (old_leader === -1 || new_leader_position > old_leader_position) {
+                // Sprawdź czy na nowym liderze są pieniądze
+                if (this.session.currentUserBets[new_leader] > 0) {
+                    const current_multiplier = this.session.trackMultipliers[new_leader];
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.showLeaderBonus(new_leader);
+                }
+            }
+        }
+        // Zwróć nowe wartości lidera
+        return { leader: new_leader, position: new_leader_position };
+    }
+
+    getCurrentLeader() {
+        let leader = -1;
+        let max_position = -1;
+        let is_tie = false;
+        
+        for (let row = 0; row < 4; row++) {
+            // Znajdź najdalszą kartę w rzędzie
+            let current_position = -1;
+            for (let col = 0; col < 7; col++) {
+                if (this.cardGrid.getCardAt(row, col) !== null) {
+                    current_position = col;
+                }
+            }
+            
+            if (current_position > max_position) {
+                // Nowy lider
+                max_position = current_position;
+                leader = row;
+                is_tie = false;
+            } else if (current_position === max_position && current_position > -1) {
+                // Remis na prowadzeniu
+                is_tie = true;
+            }
+        }
+        
+        // Jeśli jest remis, nikt nie jest liderem
+        if (is_tie) {
+            return { leader: -1, position: max_position };
+        }
+        
+        return { leader: leader, position: max_position };
+    }
+
+    // Sprawdza czy pojawił się nowy lider (dla side cards)
+    checkForNewLeader(old_leader, old_leader_position) {
+        const new_leader_info = this.getCurrentLeader();
+        const new_leader = new_leader_info.leader;
+        const new_leader_position = new_leader_info.position;
+        
+        if (new_leader !== -1 && new_leader !== old_leader) {
+            // Sprawdź czy na nowym liderze SĄ PIENIĄDZE
+            if (this.session.currentUserBets[new_leader] > 0) {
+                if (old_leader === -1) {
+                    // Dodaj bonus
+                    const current_multiplier = this.session.trackMultipliers[new_leader];
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    
+                    this.showLeaderBonus(new_leader);
+                } else if (new_leader_position > old_leader_position) {
+                    // Dodaj bonus
+                    const current_multiplier = this.session.trackMultipliers[new_leader];
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    
+                    this.showLeaderBonus(new_leader);
+                }
+            }
+        }
+        
+        // Zwróć nowe wartości lidera
+        return { leader: new_leader, position: new_leader_position };
+    }
+
+    // Pokazuje animację bonusu dla lidera
+    showLeaderBonus(row) {
+        // Znajdź pozycję karty lidera
+        let card_x = 0;
+        let card_y = 0;
+        
+        for (let col = 6; col >= 0; col--) {
+            const card = this.cardGrid.getCardAt(row, col);
+            if (card) {
+                card_x = card.x;
+                card_y = card.y;
+                break;
+            }
+        }
+        
+        if (card_x === 0 && card_y === 0) return;
+        
+        // Stwórz tekst bonusu
+        const bonusText = this.add.text(
+            card_x,
+            card_y - 50,
+            `LIDER! +0.5`,
+            {
+                fontSize: '16px',
+                fontFamily: 'Arial',
+                color: '#f1c40f',
+                stroke: '#000000',
+                strokeThickness: 3,
+                fontStyle: 'bold'
+            }
+        ).setOrigin(0.5);
+        
+        // Animacja
+        this.tweens.add({
+            targets: bonusText,
+            y: bonusText.y - 30,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Power2',
+            onComplete: () => bonusText.destroy()
+        });
+        
+        // Dodaj efekt iskier
+        this.createSparkleEffect(card_x, card_y - 30);
+        
+        // Dźwięk
+        //this.sound.play('bonus', { volume: 0.3 });
+    }
+
+    // Pokazuje animację bonusu dla combo (dwa z rzędu)
+    showComboBonus(row) {
+        let card_x = 0;
+        let card_y = 0;
+        
+        for (let col = 6; col >= 0; col--) {
+            const card = this.cardGrid.getCardAt(row, col);
+            if (card) {
+                card_x = card.x;
+                card_y = card.y;
+                break;
+            }
+        }
+        
+        if (card_x === 0 && card_y === 0) return;
+        
+        // Stwórz tekst bonusu
+        const bonusText = this.add.text(
+            card_x,
+            card_y - 50,
+            `COMBO! +0.5`,
+            {
+                fontSize: '16px',
+                fontFamily: 'Arial',
+                color: '#f1c40f',
+                stroke: '#000000',
+                strokeThickness: 3,
+                fontStyle: 'bold'
+            }
+        ).setOrigin(0.5);
+        
+        // Animacja
+        this.tweens.add({
+            targets: bonusText,
+            y: bonusText.y - 30,
+            alpha: 0,
+            duration: 1500,
+            ease: 'Power2',
+            onComplete: () => bonusText.destroy()
+        });
+        
+        // Dodaj efekt iskier
+        this.createSparkleEffect(card_x, card_y - 30);
+        
+        // Dźwięk
+        //this.sound.play('bonus', { volume: 0.3 });
+    }
+
+    // Efekt iskier
+    createSparkleEffect(x, y) {
+        for (let i = 0; i < 8; i++) {
+            const sparkle = this.add.circle(x, y, 3, 0xf1c40f);
+            
+            const angle = (i / 8) * Math.PI * 2;
+            const distance = 30 + Math.random() * 20;
+            
+            this.tweens.add({
+                targets: sparkle,
+                x: x + Math.cos(angle) * distance,
+                y: y + Math.sin(angle) * distance,
+                alpha: 0,
+                scale: 0,
+                duration: 800,
+                ease: 'Power2',
+                onComplete: () => sparkle.destroy()
+            });
+        }
+    }
 }

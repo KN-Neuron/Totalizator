@@ -12,6 +12,11 @@ export class Play extends Phaser.Scene {
     cards = null;
     bettingUI = null;
     session = null;
+    wallet = 5000;
+    walletDisplay = null;
+    walletContainer = null;
+    walletText = null;
+    walletIcon = null;
 
     constructor() {
         super({
@@ -144,18 +149,13 @@ export class Play extends Phaser.Scene {
         const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
         card.setOrigin(0.5, 0.5);
         card.setInteractive();
-        this.session = new Session();
+        this.session = new Session(this.wallet);
+        this.createWalletDisplay();
 
         this.bettingUI = new BettingUI(this);
         this.bettingUI.create();
 
         this.events.on('betConfirmed', this.handleBetConfirmed, this);
-
-        this.events.on('betChanged', this.handleBetChanged, this);
-    }
-
-    handleBetChanged() {
-        
     }
 
     createBetStatusOverlay() {
@@ -382,6 +382,7 @@ export class Play extends Phaser.Scene {
         }
         this.bettingUI.hide();
         this.session.startRound();
+        this.updateWalletDisplay();
         this.dealInitialCards().then(() => {
             this.createBetStatusOverlay();
             this.startGameTimer();
@@ -1040,5 +1041,135 @@ export class Play extends Phaser.Scene {
                 onComplete: () => sparkle.destroy()
             });
         }
+    }
+
+    createWalletDisplay() {
+        const { width, height } = this.sys.game.scale;
+        
+        // Kontener
+        this.walletContainer = this.add.container(width - 20, 20);
+        
+        // Tło z zaokrąglonymi rogami i cieniem
+        const background = this.add.graphics();
+        background.fillStyle(0x1a1a2e, 0.95);
+        background.fillRoundedRect(-160, -25, 160, 50, 15);
+        
+        // Obramowanie z gradientem
+        background.lineStyle(3, 0x8c7ae6, 1);
+        background.strokeRoundedRect(-160, -25, 160, 50, 15);
+        
+        // Cień
+        const shadow = this.add.graphics();
+        shadow.fillStyle(0x000000, 0.3);
+        shadow.fillRoundedRect(-158, -23, 156, 46, 13);
+        shadow.setDepth(-1);
+        
+        this.walletContainer.add(shadow);
+        this.walletContainer.add(background);
+        
+        // Ikona portfela/żetona
+        this.walletIcon = this.add.sprite(-130, 0, 'coin')
+            .setScale(0.08)
+            .setOrigin(0.5);
+        
+        // Animacja obracania się ikony
+        this.tweens.add({
+            targets: this.walletIcon,
+            angle: 360,
+            duration: 8000,
+            repeat: -1,
+            ease: 'Linear'
+        });
+        
+        // Tekst portfela
+        this.walletText = this.add.text(-80, 0, `${this.session.walletStatus} zł`, {
+            fontSize: '22px',
+            fontFamily: 'Arial',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 3,
+            shadow: {
+                offsetX: 2,
+                offsetY: 2,
+                color: '#000000',
+                blur: 3,
+                stroke: true,
+                fill: true
+            }
+        }).setOrigin(0, 0.5);
+        
+        // Dodaj wszystkie elementy do kontenera
+        this.walletContainer.add(this.walletIcon);
+        this.walletContainer.add(this.walletText);
+    }
+
+    updateWalletDisplay() {
+        if (this.walletText && this.session) {
+            const currentAmount = this.session.walletStatus;
+            const oldAmount = parseInt(this.walletText.text.replace(' zł', '')) || currentAmount;
+            
+            // Animacja zmiany wartości
+            if (oldAmount !== currentAmount) {
+                // Zmiana koloru w zależności od zmiany
+                const color = currentAmount > oldAmount ? '#2ecc71' : 
+                            currentAmount < oldAmount ? '#e74c3c' : '#ffffff';
+                
+                this.walletText.setColor(color);
+                
+                // Animacja tekstu
+                this.tweens.add({
+                    targets: this.walletText,
+                    scale: 1.2,
+                    duration: 200,
+                    yoyo: true,
+                    ease: 'Power2'
+                });
+                
+                // Efekt monet przy wygranej
+                if (currentAmount > oldAmount) {
+                    this.createCoinEffect();
+                }
+            }
+            
+            // Aktualizuj tekst
+            this.walletText.setText(`${currentAmount} zł`);
+            
+            // Przywróć kolor po chwili
+            this.time.delayedCall(1000, () => {
+                if (this.walletText) {
+                    this.walletText.setColor('#ffffff');
+                }
+            });
+        }
+    }
+
+    createCoinEffect() {
+        const { x, y } = this.walletContainer;
+        
+        // Efekt wylatujących monet
+        for (let i = 0; i < 5; i++) {
+            const coin = this.add.sprite(x, y, 'coin')
+                .setScale(0.04)
+                .setDepth(100);
+            
+            const angle = Phaser.Math.Between(-30, 30);
+            const distance = Phaser.Math.Between(50, 100);
+            
+            this.tweens.add({
+                targets: coin,
+                x: x + Math.cos(Phaser.Math.DegToRad(angle)) * distance,
+                y: y - Math.sin(Phaser.Math.DegToRad(angle)) * distance,
+                angle: 720,
+                alpha: 0,
+                scale: 0.01,
+                duration: 800,
+                ease: 'Power2',
+                onComplete: () => coin.destroy()
+            });
+        }
+        
+        // Dźwięk monet
+        this.sound.play('coins', { volume: 0.3 });
     }
 }

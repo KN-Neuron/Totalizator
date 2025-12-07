@@ -244,7 +244,8 @@ export class Play extends Phaser.Scene {
         this.cardPack = new CardPack(
             ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"],
             ["diamonds", "hearts", "clubs", "spades"],
-            4
+            4 // DEBUG
+            //1
         );
 
         this.cards = this.cardGrid.createGrid();
@@ -507,6 +508,68 @@ export class Play extends Phaser.Scene {
                     leader_position = new_leader_info.position;
 
                 } else {
+                    // TODO: Jokery
+                    // check game state
+                    let jokerGameState = 1;
+                    let betOnCards = []
+                    console.log(this.session.currentUserBets);
+                    for (let i = 0; i < 4; i++) {
+                        if (this.session.currentUserBets[i] > 0) {
+                            betOnCards.push(suits[i]);
+                        }
+                    }
+                    //console.log(betOnCards); // DEBUG
+                    let getOut = false;
+                    let leaderSuit = null;
+                    for (let i = 6; i >= 0; i--) {
+                        for (let j = 0; j < 4; j++) {
+                            let thisCard = this.cardGrid.getCardAt(j, i);
+                            if (thisCard == null) {
+                                continue;
+                            }
+                            let maybeSuit = thisCard.cardData.type;
+                            let sureSuit = null;
+                            for (let possibleSuit of suits) {
+                                if (maybeSuit.includes(possibleSuit)) {
+                                    sureSuit = possibleSuit;
+                                }
+                            }
+                            console.log(sureSuit);
+                            console.log(betOnCards);
+                            getOut = true;
+                            if (!betOnCards.includes(sureSuit)) {
+                                leaderSuit = sureSuit;
+                                jokerGameState = 2;
+                            }
+                        }
+                        if (getOut) {
+                            break;
+                        }
+                    }
+                    //console.log(betOnCards);
+
+                    let jokerFunction = Math.floor(Math.random() * jokerGameState);
+
+                    //console.log("jokerGameState: ", jokerGameState);
+                    //jokerFunction = 0; // DEBUG
+                    switch (jokerFunction) {
+                        case 0: // MULTIPLIER BOOST
+                            for (let betOnSuit of betOnCards) {
+                                let indexOfBet = suits.indexOf(betOnSuit);
+                                const current_multiplier = this.session.trackMultipliers[indexOfBet];
+                                this.session.updateMultiplier(indexOfBet, current_multiplier * 1.5);
+                                this.showLeaderBonus(indexOfBet);
+                                //TODO: jakis efekt wow animacja mega bonusu prosto od smoka
+                            }
+                            break;
+                        case 1:
+                            const suitIndex = suits.indexOf(leaderSuit);
+                            this.cardGrid.moveCard(suitIndex, false)
+                            break;
+                    }
+
+
+
                     // Joker - TUTAJ TEŻ MOŻESZ UŻYĆ TEJ METODY
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
 

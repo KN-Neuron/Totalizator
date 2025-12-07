@@ -19,6 +19,21 @@ To gra losowa oparta na wyścigu kart, podobna do obstawiania wyścigów koni. G
 - Osobny ekran z informacjami o zasadach rozgrywki
 - Specjalna funkcja Jokera - aktywuje losowy pozytywny efekt dla gracza
 
+## Rozgrywka
+
+<img width="1909" height="916" alt="Zrzut ekranu 2025-12-07 102941" src="https://github.com/user-attachments/assets/3afaab9e-67e2-453c-b0d0-a74c175c2d94" />
+
+<img width="1902" height="915" alt="Zrzut ekranu 2025-12-07 103256" src="https://github.com/user-attachments/assets/7d19f713-004a-46b0-a764-312cdd7bf7fb" />
+
+<img width="1908" height="916" alt="Zrzut ekranu 2025-12-07 103345" src="https://github.com/user-attachments/assets/78c9978f-7daa-4085-b5c1-e232cea4a350" />
+
+<img width="1911" height="916" alt="Zrzut ekranu 2025-12-07 103411" src="https://github.com/user-attachments/assets/09daf2e5-9302-476e-8391-1ccec29f64ac" />
+
+<img width="1467" height="690" alt="Zrzut ekranu 2025-12-07 103837" src="https://github.com/user-attachments/assets/afb41cb9-ad08-43ea-9269-8deb991478e9" />
+
+<img width="1917" height="1020" alt="jackpot" src="https://github.com/user-attachments/assets/5f48998d-bfdc-4ae4-8058-09ea79a8a31b" />
+
+
 ## Instrukcje
 
 1. Sklonuj repozytorium.

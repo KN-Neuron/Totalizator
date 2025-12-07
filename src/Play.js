@@ -140,7 +140,8 @@ export class Play extends Phaser.Scene {
         this.cardPack = new CardPack(
             ["2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"],
             ["diamonds", "hearts", "clubs", "spades"],
-            4
+            4 // DEBUG
+            //1
         );
 
         this.cards = this.cardGrid.createGrid();
@@ -350,6 +351,73 @@ export class Play extends Phaser.Scene {
                     leader_position = new_leader_info.position;
 
                 } else {
+                    // TODO: Jokery
+                    // check game state
+                    let jokerGameState = 2;
+                    let betOnCards = []
+                    console.log(this.session.currentUserBets);
+                    for (let i = 0; i < 4; i++) {
+                        if (this.session.currentUserBets[i] > 0) {
+                            betOnCards.push(suits[i]);
+                        }
+                    }
+                    console.log(betOnCards); // DEBUG
+                    let getOut = false;
+                    let leaderSuit = null;
+                    for (let i = 6; i >= 0; i--) {
+                        for (let j = 0; j < 4; j++) {
+                            let thisCard = this.cardGrid.getCardAt(j, i);
+                            if (thisCard == null) {
+                                continue;
+                            }
+                            let maybeSuit = thisCard.cardData.type;
+                            let sureSuit = null;
+                            for (let possibleSuit of suits) {
+                                if (maybeSuit.includes(possibleSuit)) {
+                                    sureSuit = possibleSuit;
+                                }
+                            }
+                            console.log(sureSuit);
+                            console.log(betOnCards);
+                            getOut = true;
+                            if (!betOnCards.includes(sureSuit)) {
+                                leaderSuit = sureSuit;
+                                jokerGameState = 4;
+                            }
+                        }
+                        if (getOut) {
+                            break;
+                        }
+                    }
+                    console.log(betOnCards);
+
+                    let jokerFunction = Math.floor(Math.random() * jokerGameState);
+
+                    console.log("jokerGameState: ", jokerGameState);
+                    //jokerFunction = 2; // DEBUG
+                    switch (jokerFunction) {
+                        case 0:
+                            console.log("JOKER 0") // jokery
+                            const new_leader_info = this.getCurrentLeader();
+                            const new_leader = new_leader_info.leader;
+                            
+                            // TODO: dodaj bonus na koncu / pokaz gdzies? idk
+                            //this.session.updateMultiplier(new_leader, current_multiplier * 1.5);
+                            //this.showLeaderBonus(new_leader);
+                            // TODO: jakis efekt wow animacja mega bonusu prosto od smoka
+                        case 1:
+                            // Wlozenie kart twojego koloru znowu do talii
+                        case 2:
+                            console.log("MOVE");
+                            console.log(leaderSuit);
+                            const suitIndex = suits.indexOf(leaderSuit);
+                            this.cardGrid.moveCard(suitIndex, false)
+                        case 3:
+                            // Zamiana twojej z najdalsza
+                    }
+
+
+
                     // Joker - TUTAJ TEŻ MOŻESZ UŻYĆ TEJ METODY
                     const card = this.add.sprite(this.cameras.main.width-100, this.cameras.main.height/2, 'cards', "back").setScale(0.75);
 

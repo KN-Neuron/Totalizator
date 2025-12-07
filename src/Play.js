@@ -218,6 +218,9 @@ export class Play extends Phaser.Scene {
         let leader = -1;
         let leader_position = -1;
 
+        // Create a container for highlight lines
+        this.highlightLinesContainer = this.add.container(0, 0);
+
         let timer = this.time.addEvent({
             delay: 1500,
             callback: async function () {
@@ -244,6 +247,10 @@ export class Play extends Phaser.Scene {
                     const cardData = {
                         type: sideCard.color + sideCard.value
                     }
+
+                    // Create highlight line for the column where the side card will be revealed
+                    this.createHighlightLine(last_column + 1);
+
                     this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value);
                     const suitIndex = suits.indexOf(sideCard.color);
                     this.cardGrid.moveCard(suitIndex, false, (card, row, newColumn) => {
@@ -395,6 +402,61 @@ export class Play extends Phaser.Scene {
             },
             callbackScope: this,
             loop: true
+        });
+    }
+
+    // Method to create a highlight line behind the column where side card is revealed
+    createHighlightLine(column) {
+        // Clean up any existing highlight lines
+        if (this.highlightLinesContainer) {
+            this.highlightLinesContainer.removeAll(true); // Remove all children and destroy them
+        }
+
+        // Get the position of the column where the side card is revealed
+        const { x, y } = this.cardGrid.gridPositions[0][column];
+
+        // Calculate the vertical bounds for the line
+        const startY = this.cardGrid.gridPositions[0][column].y - 50; // Start above the first card
+        const endY = this.cardGrid.gridPositions[3][column].y + 50; // Extend below the last card
+
+        // Calculate the position to the left of the column
+        const cardWidth = this.cardGrid.actualCardWidth || 150; // Default to 150 if not available
+        const lineX = x - (cardWidth / 2) - 20; // Position to the left of the card, with 20px offset
+
+        // Create a line graphics object
+        const lineGraphics = this.add.graphics();
+        lineGraphics.lineStyle(5, 0x80ffff, 0.50); // Thin white line with even lower opacity
+        lineGraphics.beginPath();
+        lineGraphics.moveTo(lineX, startY); // Start to the left of the column
+        lineGraphics.lineTo(lineX, endY); // Draw vertical line
+        lineGraphics.strokePath();
+
+        // Set the depth to be behind the cards
+        lineGraphics.setDepth(-1);
+
+        // Add the line to the container
+        this.highlightLinesContainer.add(lineGraphics);
+
+        // Add fade in animation
+        lineGraphics.setAlpha(0);
+        this.tweens.add({
+            targets: lineGraphics,
+            alpha: 0.25,
+            duration: 300,
+            ease: 'Power2'
+        });
+
+        // Schedule fade out after a delay
+        this.time.delayedCall(1500, () => {
+            this.tweens.add({
+                targets: lineGraphics,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    lineGraphics.destroy();
+                }
+            });
         });
     }
 

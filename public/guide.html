@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instrukcja Gry - CardRacing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --accent-gold: #fbbf24;
+            --accent-green: #10b981;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --glow: rgba(16, 185, 129, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.05) 0%, transparent 20%);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px); /* Efekt szkła */
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        /* Nagłówek */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3rem;
+            color: var(--accent-gold);
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+        }
+
+        .subtitle {
+            color: var(--accent-green);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+        }
+
+        /* Sekcje */
+        section {
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #fff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 24px;
+            background: var(--accent-gold);
+            border-radius: 2px;
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 25px;
+            color: var(--text-main);
+        }
+
+        li::before {
+            content: '♠'; /* Symbol karty jako punktor */
+            position: absolute;
+            left: 0;
+            color: var(--accent-gold);
+        }
+        
+        li:nth-child(2)::before { content: '♥'; color: #ef4444; }
+        li:nth-child(3)::before { content: '♣'; color: var(--accent-gold); }
+        li:nth-child(4)::before { content: '♦'; color: #ef4444; }
+
+        /* Tech Highlight Box */
+        .tech-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--accent-green);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .tech-box h3 {
+            color: var(--accent-green);
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .code-tag {
+            font-family: monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-gold);
+        }
+
+        /* Przycisk (opcjonalnie) */
+        .btn-start {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            text-align: center;
+            text-decoration: none;
+            font-weight: 700;
+            border-radius: 8px;
+            margin-top: 40px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(251, 191, 36, 0.3);
+        }
+
+        /* Animacja wejścia */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* RWD */
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <div class="subtitle">Przyjemna, bezpieczna rozgrywka</div>
+            <h1>CardRacing</h1>
+        </header>
+
+        <main>
+            <section>
+                <h2>O Co Chodzi?</h2>
+                <p>
+                    Witaj w świecie wyścigów, gdzie o zwycięstwie decyduje czysta matematyka.
+                    Twoim celem jest obstawienie koloru, który najszybciej dotrze do mety.
+                    Karty są dobierane z talii w czasie rzeczywistym, a każda wyciągnięta karta
+                    przybliża odpowiadającego jej "konia" do zwycięstwa.
+                </p>
+            </section>
+
+            <section>
+                <h2>Zasady Gry</h2>
+                <ul>
+                    <li><strong>Wybierz faworyta:</strong> Obstaw jeden lub kilka z czterech kolorów (Pik, Kier, Trefl, Karo).</li>
+                    <li><strong>Mechanika ruchu:</strong> Karta o tym samym kolorze, jak ta wylosowana z talii porusza się o jedno pole do przodu</li>
+                    <li><strong>Joker?!</strong> WOW! Trafiłeś na JOKERA to znaczy że przydarzy ci się losowy pozytywny efekt</li>
+                    <li><strong>Meta:</strong> Wygrywa kolor, który pierwszy przekroczy linię mety.</li>
+                    <li><strong>Nie tak szybko: </strong>Jeżeli wszystkie karty przekroczą dany próg, odkrywa się boczna a wtedy ktoś musi się cofnąć :(</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Zakłady i wygrane</h2>
+                <ul>
+                    <li><strong>Tylko jeden zwycięży:</strong> Wygrywa tylko jeden "koń" jeżeli jest to twój to GRATULACJE właśnie pomnożyłeś wartość swojego zakładu</li>
+                    <li><strong>Combo:</strong> Udało ci się dwukrotnie ruszyć swoim koniem? Właśnie zyskałeś COMBO BONUS!</li>
+                    <li><strong>Lider Stawki: </strong>Wychodzisz na prowadzenie i zostawiasz przeciwników w tyle? Twój mnożnik właśnie urósł</li>
+                    <li><strong>Strit?!: </strong>Karty ustawione po przekątnej lub w linii = NOWY WIĘKSZY BONUS</li>
+                </ul>
+            </section>
+
+            <section>
+                <div class="tech-box">
+                    <h3>🔒 Fair Play Technology</h3>
+                    <p>
+                        Nie używamy standardowego <span class="code-tag">Math.random()</span>. 
+                        Nasz silnik wykorzystuje <strong>Web Crypto API</strong> oraz 
+                        algorytm <strong>Fishera-Yatesa</strong>. 
+                    </p>
+                    <p style="margin-bottom: 0;">
+                        Gwarantuje to kryptograficzną losowość i brak możliwości manipulacji wynikiem ("seed prediction").
+                        Każde rozdanie jest unikalne i matematycznie sprawiedliwe.
+                    </p>
+                </div>
+            </section>
+        </main>
+        <a href="#" id="backToGame" class="btn-start">ROZPOCZNIJ WYŚCIG</a>
+    
+        <footer style="text-align: center; margin-top: 30px; font-size: 0.8rem; color: var(--text-muted);">
+            Stworzone na HackNation 2025 przez KN Neuron
+        </footer>
+    </div>
+    <script>
+        const backToGameBtn = document.getElementById('backToGame');
+        backToGameBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.close();
+        }, false);
+    </script>
+</body>
+</html>

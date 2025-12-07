@@ -13,10 +13,15 @@ export class Play extends Phaser.Scene {
     bettingUI = null;
     session = null;
     wallet = 5000;
+    walletStart = 5000;
     walletDisplay = null;
     walletContainer = null;
     walletText = null;
     walletIcon = null;
+
+    // Jackpot tracking variables
+    consecutiveMovesCount = 0;
+    lastMovedRow = -1;  // Track which row had the last move
 
     constructor() {
         super({
@@ -36,13 +41,104 @@ export class Play extends Phaser.Scene {
         this.add.image(0, 0, "background").setOrigin(0);
 
         const titleText = this.add.text(this.sys.game.scale.width / 2, this.sys.game.scale.height / 2,
-            "Gra totalizatora sportowego\nNacisnij aby zaczac",
+            "Gra Card Racing\nNacisnij aby zaczac",
             { align: "center", strokeThickness: 4, fontSize: 40, fontStyle: "bold", color: "#8c7ae6" }
         )
             .setOrigin(.5)
-
             .setDepth(3)
             .setInteractive();
+
+        // Add registration text at the bottom with button-like background
+        const registrationY = this.sys.game.scale.height - 250; // Move it higher up to bottom
+        const registrationText = this.add.text(this.sys.game.scale.width / 2, registrationY,
+            "Kliknij aby się zarejestrować i zyskać darmowe 50 zł na start",
+            { align: "center", fontSize: 20, fontStyle: "normal", color: "#ffffff" } // White text
+        )
+            .setOrigin(.5)
+            .setDepth(4); // Higher depth to be above background
+
+        // Create rounded button background with dark color
+        const textWidth = registrationText.width + 30; // Add some padding
+        const textHeight = registrationText.height + 15; // Add some padding
+
+        const buttonBg = this.add.graphics()
+            .setDepth(3); // Behind the text
+
+        // Draw rounded rectangle
+        const x = this.sys.game.scale.width / 2 - textWidth / 2;
+        const y = registrationY - textHeight / 2;
+        const radius = 10; // Corner radius
+
+        buttonBg.fillStyle(0x2c3e50) // Dark blue-gray color
+            .fillRoundedRect(x, y, textWidth, textHeight, radius);
+
+        // Make button interactive
+        buttonBg.setInteractive({
+            hitArea: new Phaser.Geom.Rectangle(x, y, textWidth, textHeight),
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+            useHandCursor: true
+        })
+            .on('pointerover', () => {
+                buttonBg.clear()
+                    .fillStyle(0x34495e) // Slightly lighter dark on hover
+                    .fillRoundedRect(x, y, textWidth, textHeight, radius);
+            })
+            .on('pointerout', () => {
+                buttonBg.clear()
+                    .fillStyle(0x2c3e50) // Original dark color
+                    .fillRoundedRect(x, y, textWidth, textHeight, radius);
+            });
+
+        // Help / Guide button (Phaser-rendered) - opens public/guide.html in new tab
+        const helpX = this.sys.game.scale.width - 140; // position near top-right
+        const helpY = 60;
+        const helpWidth = 120;
+        const helpHeight = 36;
+        const helpRadius = 10;
+
+        const helpContainer = this.add.container(helpX, helpY).setDepth(5);
+
+        const helpBg = this.add.graphics();
+        helpBg.fillStyle(0x8c7ae6, 1);
+        helpBg.fillRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+        helpBg.lineStyle(2, 0xffffff, 0.15);
+        helpBg.strokeRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+        helpContainer.add(helpBg);
+
+        const helpText = this.add.text(0, 0, "INSTRUKCJA", {
+            fontSize: '14px',
+            fontFamily: 'Arial',
+            color: "#ffffff",
+            fontStyle: "bold",
+            stroke: "#000000",
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        helpContainer.add(helpText);
+
+        const helpHitArea = new Phaser.Geom.Rectangle(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight);
+        helpContainer.setInteractive(helpHitArea, Phaser.Geom.Rectangle.Contains);
+
+        helpContainer.on(Phaser.Input.Events.POINTER_OVER, () => {
+            helpBg.clear();
+            helpBg.fillStyle(0x9c88ff, 1);
+            helpBg.fillRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            helpBg.lineStyle(2, 0xffffff, 0.18);
+            helpBg.strokeRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            this.input.setDefaultCursor("pointer");
+        });
+
+        helpContainer.on(Phaser.Input.Events.POINTER_OUT, () => {
+            helpBg.clear();
+            helpBg.fillStyle(0x8c7ae6, 1);
+            helpBg.fillRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            helpBg.lineStyle(2, 0xffffff, 0.15);
+            helpBg.strokeRoundedRect(-helpWidth/2, -helpHeight/2, helpWidth, helpHeight, helpRadius);
+            this.input.setDefaultCursor("default");
+        });
+
+        helpContainer.on(Phaser.Input.Events.POINTER_UP, () => {
+            window.open('/guide.html', '_blank', 'noopener');
+        });
 
         // title tween like retro arcade
         // this.add.tween({
@@ -75,6 +171,13 @@ export class Play extends Phaser.Scene {
                     if (!this.sound.get("theme-song")) {
                         this.sound.play("theme-song", { loop: true, volume: .5 });
                     }
+
+                    if (typeof helpContainer !== 'undefined' && helpContainer) {
+                        try { helpContainer.destroy(); } catch (e) {}
+                    }
+
+                    this.input.setDefaultCursor('default');
+
                     this.startGame();
                 }
             })
@@ -84,6 +187,7 @@ export class Play extends Phaser.Scene {
 
     restartGame() {
         this.cameras.main.fadeOut(200 * this.cards.length);
+        this.startGame();
     }
 
     createInitialCards() {
@@ -219,12 +323,16 @@ export class Play extends Phaser.Scene {
         let leader = -1;
         let leader_position = -1;
 
+        // Create a container for highlight lines
+        this.highlightLinesContainer = this.add.container(0, 0);
+
         let timer = this.time.addEvent({
             delay: 1500,
             callback: async function () {
                 for(let i = 0; i < 4; i++) {
                     if (this.cardGrid.getCardAt(i, 6) != null) {
                         timer.remove();
+                        this.endGame(leader);
                         return;
                     }
                 }
@@ -245,9 +353,33 @@ export class Play extends Phaser.Scene {
                     const cardData = {
                         type: sideCard.color + sideCard.value
                     }
+
+                    // Create highlight line for the column where the side card will be revealed
+                    this.createHighlightLine(last_column + 1);
+
                     this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value);
                     const suitIndex = suits.indexOf(sideCard.color);
                     this.cardGrid.moveCard(suitIndex, false, (card, row, newColumn) => {
+                        // Add jackpot logic for side cards: track consecutive moves
+                        if (this.lastMovedRow === suitIndex) {
+                            // Same row moved again - increment counter
+                            this.consecutiveMovesCount++;
+                        } else {
+                            // Different row - reset counter and start from 1
+                            this.consecutiveMovesCount = 1;
+                        }
+
+                        // Update the last moved row
+                        this.lastMovedRow = suitIndex;
+
+                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                            this.triggerJackpot();
+                            // Reset the counter after triggering the jackpot
+                            this.consecutiveMovesCount = 0;
+                            this.lastMovedRow = -1;
+                        }
+
                         last_to_move = -1;
 
                         const old_leader = leader;
@@ -269,6 +401,7 @@ export class Play extends Phaser.Scene {
                     last_column++;
                     last_to_move = -1;
 
+                    // The callback should have handled the jackpot logic, so we just continue with leader logic
                     const old_leader = leader;
                     const old_leader_position = leader_position;
 
@@ -320,6 +453,26 @@ export class Play extends Phaser.Scene {
                             if(this.session.currentUserBets[suitIndex] > 0) {
                                 this.showComboBonus(suitIndex);
                             }
+                        }
+
+                        // Add jackpot logic: track consecutive moves
+                        if (this.lastMovedRow === suitIndex) {
+                            // Same row moved again - increment counter
+                            this.consecutiveMovesCount++;
+                        } else {
+                            // Different row - reset counter and start from 1
+                            this.consecutiveMovesCount = 1;
+                        }
+
+                        // Update the last moved row
+                        this.lastMovedRow = suitIndex;
+
+                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                            this.triggerJackpot();
+                            // Reset the counter after triggering the jackpot
+                            this.consecutiveMovesCount = 0;
+                            this.lastMovedRow = -1;
                         }
 
                         last_to_move = suitIndex;
@@ -432,6 +585,10 @@ export class Play extends Phaser.Scene {
                         }
                     });
 
+                    // Joker breaks the consecutive move sequence
+                    this.lastMovedRow = -1;
+                    this.consecutiveMovesCount = 0;
+
                     last_to_move = -1;
 
                     // Dla jokera też możesz sprawdzić lidera (bez przesuwania karty)
@@ -452,12 +609,122 @@ export class Play extends Phaser.Scene {
                 for(let i = 0; i < 4; i++) {
                     if (this.cardGrid.getCardAt(i, 6) != null) {
                         timer.remove();
+                        this.endGame(leader);
                         return;
                     }
                 }
             },
             callbackScope: this,
             loop: true
+        });
+    }
+
+    endGame(winningTrack) {
+        console.log("Game ended");
+
+        this.session.finishRound(winningTrack);
+        this.wallet = this.session.walletStatus;
+
+        this.clearScreenWithAnimation().then(() => {
+            if(this.session.prevWonAmount > 0) {
+                this.triggerEndWin(this.session.prevWonAmount);
+            } else {
+                this.triggerLostEnd();
+            }
+        });
+    }
+
+    async clearScreenWithAnimation() {
+        return new Promise((resolve) => {
+            // 1. Fade out całego ekranu
+            this.cameras.main.fadeOut(500);
+            
+            // 2. Po zakończeniu fade out, wyczyść wszystko
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                // Zatrzymaj wszystkie animacje
+                this.tweens.killAll();
+                this.time.removeAllEvents();
+                
+                // Usuń wszystkie obiekty (oprócz kamery)
+                this.children.removeAll();
+                
+                // Zresetuj komponenty
+                if (this.bettingUI) {
+                    this.bettingUI.destroy();
+                    this.bettingUI = null;
+                }
+                
+                if (this.cardGrid) {
+                    this.cardGrid.destroy();
+                    this.cardGrid = null;
+                }
+                
+                // Reset zmiennych
+                this.cardPack = null;
+                this.cards = null;
+                this.deckCards = [];
+                this.betStatusTexts = [];
+                this.betStatusContainer = null;
+                
+                // Fade in
+                this.cameras.main.fadeIn(300);
+                
+                resolve();
+            });
+        });
+    }
+    // Method to create a highlight line behind the column where side card is revealed
+    createHighlightLine(column) {
+        // Clean up any existing highlight lines
+        if (this.highlightLinesContainer) {
+            this.highlightLinesContainer.removeAll(true); // Remove all children and destroy them
+        }
+
+        // Get the position of the column where the side card is revealed
+        const { x, y } = this.cardGrid.gridPositions[0][column];
+
+        // Calculate the vertical bounds for the line
+        const startY = this.cardGrid.gridPositions[0][column].y - 50; // Start above the first card
+        const endY = this.cardGrid.gridPositions[3][column].y + 50; // Extend below the last card
+
+        // Calculate the position to the left of the column
+        const cardWidth = this.cardGrid.actualCardWidth || 150; // Default to 150 if not available
+        const lineX = x - (cardWidth / 2) - 20; // Position to the left of the card, with 20px offset
+
+        // Create a line graphics object
+        const lineGraphics = this.add.graphics();
+        lineGraphics.lineStyle(5, 0x80ffff, 0.50); // Thin white line with even lower opacity
+        lineGraphics.beginPath();
+        lineGraphics.moveTo(lineX, startY); // Start to the left of the column
+        lineGraphics.lineTo(lineX, endY); // Draw vertical line
+        lineGraphics.strokePath();
+
+        // Set the depth to be behind the cards
+        lineGraphics.setDepth(-1);
+
+        // Add the line to the container
+        this.highlightLinesContainer.add(lineGraphics);
+
+        // Add fade in animation
+        lineGraphics.setAlpha(0);
+        this.tweens.add({
+            targets: lineGraphics,
+            alpha: 0.25,
+            duration: 300,
+            ease: 'Power2'
+        });
+
+        // Schedule fade out after a delay
+        this.time.delayedCall(1500, () => {
+            this.tweens.add({
+                targets: lineGraphics,
+                alpha: 0,
+                duration: 500,
+                ease: 'Power2',
+                onComplete: () => {
+                    lineGraphics.destroy();
+                }
+            });
         });
     }
 
@@ -656,10 +923,23 @@ export class Play extends Phaser.Scene {
 
     triggerJackpot()
     {
+        // Hide deck cards in top-left during jackpot
+        if (this.deckCards && Array.isArray(this.deckCards)) {
+            this.deckCards.forEach(card => {
+                if (card) {
+                    card.setVisible(false);
+                }
+            });
+        }
+
+        // Hide main card grid during jackpot
+        this.hideMainCardGrid();
+
         // Create video but make it invisible initially
         this.video = this.add.video(window.innerWidth / 2, window.innerHeight / 2, 'smok').setScale(1.3);
         this.video.setAlpha(0); // Initially invisible
         this.video.play();
+        this.video.setDepth(90); // Set depth above normal game elements but below deck cards and UI effects
 
         // Show JACKPOT popup first
         this.showJackpotPopup();
@@ -674,6 +954,21 @@ export class Play extends Phaser.Scene {
             });
         });
     }
+
+    hideMainCardGrid() {
+        if (this.cardGrid && this.cardGrid.cardGrid) {
+            for (let row = 0; row < this.cardGrid.config.rows; row++) {
+                for (let col = 0; col < this.cardGrid.config.columns; col++) {
+                    const card = this.cardGrid.cardGrid[row][col];
+                    if (card) {
+                        card.setVisible(false);
+                    }
+                }
+            }
+        }
+    }
+
+
 
     showJackpotPopup()
     {
@@ -951,7 +1246,7 @@ export class Play extends Phaser.Scene {
                 // Nowy lider - nadaj bonus jeśli jest na nim zakład
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                     bonusTriggered = true;
                 }
@@ -959,7 +1254,7 @@ export class Play extends Phaser.Scene {
                 // Ten sam lider, ale awansował do lepszej pozycji - nadaj bonus
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                     bonusTriggered = true;
                 }
@@ -1014,14 +1309,14 @@ export class Play extends Phaser.Scene {
                 // Nowy lider - nadaj bonus jeśli jest na nim zakład
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                 }
             } else if (new_leader === old_leader && new_leader_position > old_leader_position) {
                 // Ten sam lider, ale awansował do lepszej pozycji - nadaj bonus
                 if (this.session.currentUserBets[new_leader] > 0) {
                     const current_multiplier = this.session.trackMultipliers[new_leader];
-                    this.session.updateMultiplier(new_leader, current_multiplier + 0.5);
+                    this.session.updateMultiplier(new_leader, current_multiplier + 0.25);
                     this.showLeaderBonus(new_leader);
                 }
             }
@@ -1052,7 +1347,7 @@ export class Play extends Phaser.Scene {
         const bonusText = this.add.text(
             card_x,
             card_y - 50,
-            `LIDER! +0.5`,
+            `LIDER! +0.25`,
             {
                 fontSize: '16px',
                 fontFamily: 'Arial',
@@ -1100,7 +1395,7 @@ export class Play extends Phaser.Scene {
         const bonusText = this.add.text(
             card_x,
             card_y - 50,
-            `COMBO! +0.5`,
+            `COMBO! +0.25`,
             {
                 fontSize: '16px',
                 fontFamily: 'Arial',
@@ -1277,5 +1572,369 @@ export class Play extends Phaser.Scene {
 
         // Dźwięk monet
         this.sound.play('coins', { volume: 0.3 });
+    }
+
+    triggerEndWin(winAmount)
+    {
+        this.add.image(0, 0, "background").setOrigin(0);
+
+        // Create a semi-transparent black overlay that fades in
+        const overlay = this.add.rectangle(
+            this.sys.game.scale.width / 2,
+            this.sys.game.scale.height / 2,
+            this.sys.game.scale.width,
+            this.sys.game.scale.height,
+            0x000000
+        ).setDepth(100).setAlpha(50);
+
+        // Fade in the overlay
+        this.tweens.add({
+            targets: overlay,
+            alpha: 0.3,
+            duration: 999,
+            ease: 'Power2'
+        });
+
+        const jackpotText = this.add.text(
+            this.sys.game.scale.width / 2,
+            -200, // Start above the screen
+            "WYGRANA!",
+            {
+                fontSize: '120px',
+                fontFamily: 'Arial Black, Arial, sans-serif',
+                color: '#ffffff',
+                stroke: '#FFD700',
+                strokeThickness: 8,
+                fontStyle: 'bold'
+            }
+        )
+        .setOrigin(0.5, 0.5)
+        .setDepth(101)
+        .setAlpha(0);
+
+        const formattedAmount = winAmount.toLocaleString('en-US');
+
+        // Fade in and move down the JACKPOT text
+        this.tweens.add({
+            targets: [jackpotText],
+            y: this.sys.game.scale.height / 2,
+            alpha: 1,
+            duration: 800,
+            ease: 'Bounce.easeOut',
+            onComplete: () => {
+                // Start confetti effect after the text appears
+                this.startConfettiEffect();
+
+                // Start the pulsing animation after fade in
+                this.tweens.add({
+                    targets: jackpotText,
+                    scaleX: 1.3,
+                    scaleY: 1.3,
+                    duration: 800,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+
+                // Add color changing effect
+                this.tweens.add({
+                    targets: jackpotText,
+                    tint: 0xFFFF00, // Yellow
+                    duration: 1000,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1,
+                    hold: 500,
+                    props: {
+                        tint: {
+                            value: 0xFFD700, // Gold
+                            duration: 500,
+                            ease: 'Sine.easeInOut'
+                        }
+                    }
+                });
+            }
+        });
+
+        // Add a glowing effect with particles or by creating multiple text layers
+        for (let i = 1; i <= 3; i++) {
+            const glowText = this.add.text(
+                this.sys.game.scale.width / 2,
+                -200, // Start above the screen
+                "WYGRANA!",
+                {
+                    fontSize: '120px',
+                    fontFamily: 'Arial Black, Arial, sans-serif',
+                    color: '#FFD700',
+                    stroke: '#FFA500',
+                    strokeThickness: 4,
+                    fontStyle: 'bold'
+                }
+            )
+            .setOrigin(0.5, 0.5)
+            .setDepth(100)
+            .setAlpha(0);
+
+            // Fade in and move down the glow text
+            this.tweens.add({
+                targets: glowText,
+                y: this.sys.game.scale.height / 2,
+                alpha: 0.7 - (i * 0.2),
+                duration: 800 + (i * 100), // Stagger the timing
+                ease: 'Bounce.easeOut',
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: glowText,
+                        scaleX: 1.4,
+                        scaleY: 1.4,
+                        alpha: 0.3,
+                        duration: 800,
+                        ease: 'Sine.easeInOut',
+                        yoyo: true,
+                        repeat: -1
+                    });
+                }
+            });
+        }
+
+        // Add glow effect for win amount text
+        for (let i = 1; i <= 2; i++) {
+            const amountGlowText = this.add.text(
+                this.sys.game.scale.width / 2,
+                -300,
+                `${formattedAmount}zł`,
+                {
+                    fontSize: '96px',
+                    fontFamily: 'Arial Black, Arial, sans-serif',
+                    color: '#fff700ff',
+                    stroke: '#ff9900ff',
+                    strokeThickness: 4,
+                    fontStyle: 'bold'
+                }
+            )
+            .setOrigin(0.5, 0.5)
+            .setDepth(100)
+            .setAlpha(0);
+
+            // Fade in and move down the amount glow text
+            this.tweens.add({
+                targets: amountGlowText,
+                y: this.sys.game.scale.height / 2 + 160,
+                alpha: 0.5 - (i * 0.15),
+                duration: 800 + (i * 150),
+                ease: 'Bounce.easeOut',
+                delay: 300, // Slight delay after "YOU WON!"
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: amountGlowText,
+                        scaleX: 1.3,
+                        scaleY: 1.3,
+                        alpha: 0.2,
+                        duration: 600,
+                        ease: 'Sine.easeInOut',
+                        yoyo: true,
+                        repeat: -1
+                    });
+                }
+            });
+
+            const buttonY = this.sys.game.scale.height / 2 + 260;
+            const nextGameButton = this.createEndScreenButton(
+                this.sys.game.scale.width / 2, buttonY, 220, 50, 0x27ae60, '▶ NASTĘPNA GRA',
+                () => {
+                    this.clearScreenWithAnimation().then(() => {
+                        this.add.image(0, 0, "background").setOrigin(0);
+                        this.startGame();
+                    });
+                }
+            );
+            this.add(nextGameButton.container);
+        }
+    }
+
+    triggerLostEnd() {
+        this.add.image(0, 0, "background").setOrigin(0);
+
+        const overlay = this.add.rectangle(
+            this.sys.game.scale.width / 2,
+            this.sys.game.scale.height / 2,
+            this.sys.game.scale.width,
+            this.sys.game.scale.height,
+            0x000000
+        ).setDepth(100).setAlpha(50);
+
+        // Fade in the overlay
+        this.tweens.add({
+            targets: overlay,
+            alpha: 0.3,
+            duration: 999,
+            ease: 'Power2'
+        });
+
+        const loseText = this.add.text(
+            this.sys.game.scale.width / 2,
+            -200, // Start above the screen
+            "SPRÓBUJ JESZCZE RAZ!",
+            {
+                fontSize: '80px',
+                fontFamily: 'Arial Black, Arial, sans-serif',
+                color: '#ff0000ff',
+                stroke: '#ffffffff',
+                strokeThickness: 8,
+                fontStyle: 'bold'
+            }
+        )
+        .setOrigin(0.5, 0.5)
+        .setDepth(101)
+        .setAlpha(0);
+
+        this.tweens.add({
+            targets: [loseText],
+            y: this.sys.game.scale.height / 2,
+            alpha: 1,
+            duration: 800,
+            ease: 'Bounce.easeOut',
+            onComplete: () => {
+            //Start the pulsing animation after fade in
+                this.tweens.add({
+                    targets: loseText,
+                    scaleX: 1.15,
+                    scaleY: 1.15,
+                    duration: 800,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1
+                });
+            }
+        });
+
+        const buttonY = this.sys.game.scale.height / 2 + 260;
+        const nextGameButton = this.createEndScreenButton(
+            this.sys.game.scale.width / 2, buttonY, 220, 50, 0x27ae60, '▶ NASTĘPNA GRA',
+            () => {
+                this.clearScreenWithAnimation().then(() => {
+                    this.add.image(0, 0, "background").setOrigin(0);
+                    this.startGame();
+                });
+            }
+        );
+        this.add(nextGameButton.container);
+    }
+
+    // Tworzenie przycisku dla ekranu końcowego
+    createEndScreenButton(x, y, width, height, color, text, onClick) {
+        const container = this.add.container(x, y);
+        
+        // Tło przycisku
+        const buttonBg = this.add.graphics();
+        buttonBg.fillStyle(color, 1);
+        buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+        
+        // Obramowanie
+        buttonBg.lineStyle(2, 0xffffff, 1);
+        buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+        
+        container.add(buttonBg);
+        
+        // Tekst przycisku
+        const buttonText = this.add.text(0, 0, text, {
+            fontSize: '18px',
+            fontFamily: 'Arial',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2
+        }).setOrigin(0.5);
+        container.add(buttonText);
+        
+        // Interaktywność
+        const hitArea = new Phaser.Geom.Rectangle(-width/2, -height/2, width, height);
+        container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+        
+        // Efekty hover
+        container.on('pointerover', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 0.8);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            this.tweens.add({
+                targets: container,
+                scale: 1.05,
+                duration: 100,
+                ease: 'Power2'
+            });
+            
+            this.input.setDefaultCursor('pointer');
+        });
+        
+        container.on('pointerout', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 1);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            this.tweens.add({
+                targets: container,
+                scale: 1,
+                duration: 100,
+                ease: 'Power2'
+            });
+            
+            this.input.setDefaultCursor('default');
+        });
+        
+        container.on('pointerdown', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 0.6);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            this.sound.play('click', { volume: 0.3 });
+        });
+        
+        container.on('pointerup', () => {
+            buttonBg.clear();
+            buttonBg.fillStyle(color, 0.8);
+            buttonBg.fillRoundedRect(-width/2, -height/2, width, height, 10);
+            buttonBg.lineStyle(2, 0xffffff, 1);
+            buttonBg.strokeRoundedRect(-width/2, -height/2, width, height, 10);
+            
+            onClick();
+        });
+        
+        return {
+            container: container,
+            background: buttonBg,
+            text: buttonText
+        };
+    }
+
+    createFallingCoinsEffect(x, y, count = 10) {
+        for (let i = 0; i < count; i++) {
+            const coin = this.add.sprite(x + Phaser.Math.Between(-200, 200), y - 100, 'coin')
+                .setScale(0.05)
+                .setDepth(1000);
+            
+            const angle = Phaser.Math.Between(-30, 30);
+            const distance = Phaser.Math.Between(100, 200);
+            const duration = Phaser.Math.Between(800, 1200);
+            
+            this.tweens.add({
+                targets: coin,
+                x: coin.x + Math.cos(Phaser.Math.DegToRad(angle)) * distance,
+                y: coin.y + Math.sin(Phaser.Math.DegToRad(angle)) * distance + 200,
+                angle: 720,
+                alpha: 0,
+                scale: 0.02,
+                duration: duration,
+                ease: 'Power2',
+                delay: i * 50,
+                onComplete: () => coin.destroy()
+            });
+        }
     }
 }

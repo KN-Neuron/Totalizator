@@ -18,6 +18,10 @@ export class Play extends Phaser.Scene {
     walletText = null;
     walletIcon = null;
 
+    // Jackpot tracking variables
+    consecutiveMovesCount = 0;
+    lastMovedRow = -1;  // Track which row had the last move
+
     constructor() {
         super({
             key: 'Play'
@@ -36,7 +40,7 @@ export class Play extends Phaser.Scene {
         this.add.image(0, 0, "background").setOrigin(0);
 
         const titleText = this.add.text(this.sys.game.scale.width / 2, this.sys.game.scale.height / 2,
-            "Gra totalizatora sportowego\nNacisnij aby zaczac",
+            "Gra Card Racing\nNacisnij aby zaczac",
             { align: "center", strokeThickness: 4, fontSize: 40, fontStyle: "bold", color: "#8c7ae6" }
         )
             .setOrigin(.5)
@@ -254,6 +258,26 @@ export class Play extends Phaser.Scene {
                     this.cardGrid.changeCardAt(4, last_column+1, sideCard.color + sideCard.value);
                     const suitIndex = suits.indexOf(sideCard.color);
                     this.cardGrid.moveCard(suitIndex, false, (card, row, newColumn) => {
+                        // Add jackpot logic for side cards: track consecutive moves
+                        if (this.lastMovedRow === suitIndex) {
+                            // Same row moved again - increment counter
+                            this.consecutiveMovesCount++;
+                        } else {
+                            // Different row - reset counter and start from 1
+                            this.consecutiveMovesCount = 1;
+                        }
+
+                        // Update the last moved row
+                        this.lastMovedRow = suitIndex;
+
+                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                            this.triggerJackpot();
+                            // Reset the counter after triggering the jackpot
+                            this.consecutiveMovesCount = 0;
+                            this.lastMovedRow = -1;
+                        }
+
                         last_to_move = -1;
 
                         const old_leader = leader;
@@ -275,6 +299,7 @@ export class Play extends Phaser.Scene {
                     last_column++;
                     last_to_move = -1;
 
+                    // The callback should have handled the jackpot logic, so we just continue with leader logic
                     const old_leader = leader;
                     const old_leader_position = leader_position;
 
@@ -328,6 +353,26 @@ export class Play extends Phaser.Scene {
                             }
                         }
 
+                        // Add jackpot logic: track consecutive moves
+                        if (this.lastMovedRow === suitIndex) {
+                            // Same row moved again - increment counter
+                            this.consecutiveMovesCount++;
+                        } else {
+                            // Different row - reset counter and start from 1
+                            this.consecutiveMovesCount = 1;
+                        }
+
+                        // Update the last moved row
+                        this.lastMovedRow = suitIndex;
+
+                        // Check if we've reached 6 consecutive moves AND there's a bet on this row
+                        if (this.consecutiveMovesCount >= 6 && this.session && this.session.currentUserBets && this.session.currentUserBets[suitIndex] > 0) {
+                            this.triggerJackpot();
+                            // Reset the counter after triggering the jackpot
+                            this.consecutiveMovesCount = 0;
+                            this.lastMovedRow = -1;
+                        }
+
                         last_to_move = suitIndex;
                         const old_leader = leader;
                         const old_leader_position = leader_position;
@@ -375,6 +420,10 @@ export class Play extends Phaser.Scene {
                             });
                         }
                     });
+
+                    // Joker breaks the consecutive move sequence
+                    this.lastMovedRow = -1;
+                    this.consecutiveMovesCount = 0;
 
                     last_to_move = -1;
 
@@ -655,10 +704,23 @@ export class Play extends Phaser.Scene {
 
     triggerJackpot()
     {
+        // Hide deck cards in top-left during jackpot
+        if (this.deckCards && Array.isArray(this.deckCards)) {
+            this.deckCards.forEach(card => {
+                if (card) {
+                    card.setVisible(false);
+                }
+            });
+        }
+
+        // Hide main card grid during jackpot
+        this.hideMainCardGrid();
+
         // Create video but make it invisible initially
         this.video = this.add.video(window.innerWidth / 2, window.innerHeight / 2, 'smok').setScale(1.3);
         this.video.setAlpha(0); // Initially invisible
         this.video.play();
+        this.video.setDepth(90); // Set depth above normal game elements but below deck cards and UI effects
 
         // Show JACKPOT popup first
         this.showJackpotPopup();
@@ -673,6 +735,21 @@ export class Play extends Phaser.Scene {
             });
         });
     }
+
+    hideMainCardGrid() {
+        if (this.cardGrid && this.cardGrid.cardGrid) {
+            for (let row = 0; row < this.cardGrid.config.rows; row++) {
+                for (let col = 0; col < this.cardGrid.config.columns; col++) {
+                    const card = this.cardGrid.cardGrid[row][col];
+                    if (card) {
+                        card.setVisible(false);
+                    }
+                }
+            }
+        }
+    }
+
+
 
     showJackpotPopup()
     {

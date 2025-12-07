@@ -3,7 +3,7 @@ import { Play } from './Play';
 import Phaser from 'phaser';
 
 const config = {
-    title: 'Gra totalizatora sportowego',
+    title: 'Gra Card Racing',
     type: Phaser.AUTO,
     width: window.innerWidth,
     height: window.innerHeight,

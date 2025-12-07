@@ -12,7 +12,7 @@ export default class CardPack {
 
     #buildDeck(cardsValues, cardsColors) {
         const deck = [];
-        
+
         let id = 0;
 
         for (let color of cardsColors) {
@@ -33,23 +33,32 @@ export default class CardPack {
             const newJoker = new Card(id++, 'JOKER', 'JOKER');
             deck.push(newJoker);
         }
-        
+
         shuffled = this.#shuffleDeck(deck);
-        
+
         return shuffled;
     }
 
     #shuffleDeck(deck) {
-        const newDeck = [...deck]; 
+        const newDeck = [...deck];
 
         for (let i = newDeck.length - 1; i > 0; i--) {
             const randomBuffer = new Uint32Array(1);
             window.crypto.getRandomValues(randomBuffer);
 
             const j = Math.floor((randomBuffer[0] / (0xFFFFFFFF + 1)) * (i + 1));
-    
+
             [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
         }
+
+        // ALWAYS JACKPOT FOR DEBUGGING
+        newDeck[0] = new Card(0, 'hearts', 'Ace');
+        newDeck[1] = new Card(0, 'hearts', 'Ace');
+        newDeck[2] = new Card(0, 'hearts', 'Ace');
+        newDeck[3] = new Card(0, 'hearts', 'Ace');
+        newDeck[4] = new Card(0, 'hearts', 'Ace');
+        newDeck[5] = new Card(0, 'hearts', 'Ace');
+
         return newDeck;
     }
 

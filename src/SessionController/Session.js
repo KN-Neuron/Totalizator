@@ -1,11 +1,12 @@
 export class Session {
-    constructor (walletStatus =  5000, baseMultiplier = 2.25) {
+    constructor (walletStatus =  5000, baseMultiplier = 2) {
         this.numTracks = 4;
         this.walletStatus = walletStatus;
         this.baseMultiplier = baseMultiplier;
         this.currentUserBets = this.#getStartBets();
         this.trackMultipliers = this.#getStartMultipliers();
         this.prevWinTrack = null;
+        this.prevWonAmount = 0;
         this.gameOn = false;
     }
 
@@ -44,6 +45,7 @@ export class Session {
         this.gameOn = false;
         this.prevWinTrack = winningTrack;
         this.walletStatus += this.getPredictedWinnings(winningTrack);
+        this.prevWonAmount = this.getPredictedWinnings(winningTrack);
         this.currentUserBets = this.#getStartBets();
         this.trackMultipliers = this.#getStartMultipliers();
     }
